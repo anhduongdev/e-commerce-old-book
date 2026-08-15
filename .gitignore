@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# nestjs
+dist/
+
+# testing
+coverage/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+
+# misc
+.DS_Store
+
+# prisma generated client (regenerated via `prisma generate`)
+generated/

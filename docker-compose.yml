@@ -1,0 +1,34 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: comic_store_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: comic_store
+      MYSQL_USER: comic_user
+      MYSQL_PASSWORD: comic_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-proot_password",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  mysql_data:
