@@ -88,7 +88,7 @@ Constructor injection cho mọi provider, KHÔNG `new Service()` thủ công. DT
 
 ## Database (Prisma)
 
-- `schema.prisma` chưa có model — KHÔNG tự thiết kế model khi chưa được yêu cầu.
+- `schema.prisma` đã có đủ model theo thiết kế DB hiện tại (xem comment đầu file để biết vài ngoại lệ Prisma không diễn tả được — generated column, FULLTEXT ngram, CHECK constraint — vẫn do MySQL enforce qua `docker/mysql/init/schema.sql`). Thêm bảng/field mới thì sửa CẢ hai file này cho khớp nhau.
 - Mọi truy cập DB qua `PrismaService`, không `new PrismaClient()` nơi khác.
 - Transaction chỉ khi 1 nghiệp vụ đổi nhiều dữ liệu liên quan cần cùng thành công/rollback (vd order+stock+payment).
 - Tồn kho: chống overselling bằng atomic update/transaction, không `SELECT` rồi `UPDATE` rời rạc.

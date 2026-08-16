@@ -6,3 +6,794 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+// =====================================================================
+// Nguồn sự thật cho cấu trúc bảng là docker/mysql/init/schema.sql (raw SQL,
+// chạy tự động khi khởi tạo container MySQL). File này là model Prisma map
+// 1-1 với schema đó để PrismaService dùng.
+//
+// Ngoại lệ cố ý (Prisma không diễn tả được, DB vẫn enforce qua raw SQL):
+//   - product_variants.available_quantity: cột GENERATED ALWAYS AS STORED,
+//     KHÔNG khai báo field ở đây để Prisma không bao giờ cố ghi vào cột này.
+//     Tính available = stockQuantity - reservedQuantity ở service, hoặc
+//     $queryRaw khi cần lọc/sort trực tiếp trên cột DB.
+//   - products FULLTEXT ft_products_search (WITH PARSER ngram): không khai
+//     báo @@fulltext (parser ngram không có trong Prisma) — search dùng
+//     $queryRaw MATCH...AGAINST.
+//   - Các CHECK constraint (chk_users_identity, chk_variants_stock, ...):
+//     Prisma không có cú pháp cho CHECK — DB vẫn enforce, app không cần lo.
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// 1. AUTH & NGƯỜI DÙNG
+// ---------------------------------------------------------------------
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+/// Một hệ thống tài khoản chung. ADMIN = CUSTOMER + quyền vào /admin.
+model User {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  fullName        String    @map("full_name") @db.VarChar(150)
+  email           String?   @unique @db.VarChar(191)
+  phone           String?   @unique @db.VarChar(20)
+  passwordHash    String    @map("password_hash") @db.VarChar(255)
+  role            UserRole  @default(CUSTOMER)
+  isActive        Boolean   @default(true) @map("is_active")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.DateTime(3)
+  lastLoginAt     DateTime? @map("last_login_at") @db.DateTime(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+
+  sessions             UserSession[]
+  passwordResetTokens  PasswordResetToken[]
+  addresses            Address[]
+  cart                 Cart?
+  wishlistItems        WishlistItem[]
+  orders               Order[]
+  orderStatusHistories OrderStatusHistory[]
+  stockMovements       StockMovement[]
+  sellRequests         SellRequest[]        @relation("SellRequestUser")
+  handledSellRequests  SellRequest[]        @relation("SellRequestHandler")
+  posts                Post[]
+  updatedSettings      Setting[]
+
+  @@index([role, isActive], map: "idx_users_role_active")
+  @@map("users")
+}
+
+/// Phiên đăng nhập (refresh token). Cookie HttpOnly chỉ giữ token thô,
+/// DB chỉ lưu hash — DB rò rỉ thì token không dùng lại được.
+model UserSession {
+  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt    @map("user_id") @db.UnsignedBigInt
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  userAgent String?   @map("user_agent") @db.VarChar(255)
+  ipAddress Bytes?    @map("ip_address") @db.VarBinary(16)
+  expiresAt DateTime  @map("expires_at") @db.DateTime(3)
+  revokedAt DateTime? @map("revoked_at") @db.DateTime(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt], map: "idx_sessions_user")
+  @@index([expiresAt], map: "idx_sessions_expires")
+  @@map("user_sessions")
+}
+
+model PasswordResetToken {
+  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt    @map("user_id") @db.UnsignedBigInt
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  expiresAt DateTime  @map("expires_at") @db.DateTime(3)
+  usedAt    DateTime? @map("used_at") @db.DateTime(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_prt_user")
+  @@map("password_reset_tokens")
+}
+
+/// Sổ địa chỉ. Đơn hàng KHÔNG FK tới bảng này — copy snapshot vào Order,
+/// khách sửa/xóa địa chỉ không được làm sai lệch đơn cũ.
+model Address {
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId        BigInt    @map("user_id") @db.UnsignedBigInt
+  recipientName String    @map("recipient_name") @db.VarChar(150)
+  phone         String    @db.VarChar(20)
+  province      String    @db.VarChar(100)
+  district      String    @db.VarChar(100)
+  ward          String?   @db.VarChar(100)
+  streetAddress String    @map("street_address") @db.VarChar(255)
+  note          String?   @db.VarChar(255)
+  isDefault     Boolean   @default(false) @map("is_default")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, deletedAt], map: "idx_addresses_user")
+  @@map("addresses")
+}
+
+// ---------------------------------------------------------------------
+// 2. CATALOG
+// ---------------------------------------------------------------------
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  HIDDEN
+}
+
+enum ConditionGrade {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  WORN
+}
+
+/// Tối đa 2 cấp: parentId NULL = cấp 1, có parentId = cấp 2 (enforce ở service).
+model Category {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  parentId    BigInt?  @map("parent_id") @db.UnsignedBigInt
+  name        String   @db.VarChar(150)
+  slug        String   @unique @db.VarChar(191)
+  description String?  @db.VarChar(500)
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  parent            Category?         @relation("CategoryParent", fields: [parentId], references: [id], onDelete: Restrict)
+  children          Category[]        @relation("CategoryParent")
+  productCategories ProductCategory[]
+
+  @@index([parentId, sortOrder], map: "idx_categories_parent")
+  @@map("categories")
+}
+
+/// Bộ truyện (One Piece, Conan...). Sách lẻ thì product.seriesId = null.
+model Series {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name         String    @db.VarChar(200)
+  slug         String    @unique @db.VarChar(191)
+  author       String?   @db.VarChar(150)
+  publisher    String?   @db.VarChar(150)
+  description  String?   @db.Text
+  coverUrl     String?   @map("cover_url") @db.VarChar(500)
+  totalVolumes Int?      @map("total_volumes") @db.UnsignedSmallInt
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(3)
+
+  products Product[]
+
+  @@index([isActive, deletedAt], map: "idx_series_active")
+  @@map("series")
+}
+
+/// PRODUCT = đầu sách hiển thị trên 1 trang chi tiết. Thuộc tính
+/// "thư mục học" (tác giả, NXB, mô tả) nằm ở đây; giá/tồn nằm ở variant.
+model Product {
+  id               BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  seriesId         BigInt?       @map("series_id") @db.UnsignedBigInt
+  name             String        @db.VarChar(255)
+  slug             String        @unique @db.VarChar(191)
+  author           String?       @db.VarChar(150)
+  publisher        String?       @db.VarChar(150)
+  publishYear      Int?          @map("publish_year") @db.UnsignedSmallInt
+  isbn             String?       @db.VarChar(20)
+  language         String?       @default("Tiếng Việt") @db.VarChar(50)
+  shortDescription String?       @map("short_description") @db.VarChar(500)
+  description      String?       @db.Text
+  /// denormalize ảnh đại diện để listing không phải JOIN
+  thumbnailUrl     String?       @map("thumbnail_url") @db.VarChar(500)
+  /// denormalize MIN(variant.price) — dùng để sort/filter giá
+  minPrice         BigInt?       @map("min_price") @db.UnsignedBigInt
+  /// denormalize SUM(variant.available) — dùng để filter còn/hết
+  totalStock       Int           @default(0) @map("total_stock")
+  status           ProductStatus @default(DRAFT)
+  isFeatured       Boolean       @default(false) @map("is_featured")
+  soldCount        Int           @default(0) @map("sold_count") @db.UnsignedInt
+  viewCount        Int           @default(0) @map("view_count") @db.UnsignedInt
+  publishedAt      DateTime?     @map("published_at") @db.DateTime(3)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+  /// soft delete: không xóa cứng hàng đã có đơn
+  deletedAt        DateTime?     @map("deleted_at") @db.DateTime(3)
+
+  series            Series?           @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  variants          ProductVariant[]
+  images            ProductImage[]
+  productCategories ProductCategory[]
+  wishlistItems     WishlistItem[]
+  orderItems        OrderItem[]
+
+  @@index([seriesId], map: "idx_products_series")
+  @@index([status, deletedAt, createdAt], map: "idx_products_listing")
+  @@index([isFeatured, status, createdAt], map: "idx_products_featured")
+  @@index([status, minPrice], map: "idx_products_price")
+  @@index([author], map: "idx_products_author")
+  @@index([publisher], map: "idx_products_publisher")
+  @@map("products")
+}
+
+/// VARIANT = TẬP truyện (hoặc bản duy nhất của sách lẻ) — đơn vị có GIÁ,
+/// TỒN, TÌNH TRẠNG, SKU, tức là thứ được bỏ vào giỏ. Sách lẻ vẫn tạo đúng
+/// 1 variant với volumeNumber = null để mọi luồng mua hàng chỉ có một
+/// đường đi (không phân nhánh product-vs-variant).
+model ProductVariant {
+  id               BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  productId        BigInt         @map("product_id") @db.UnsignedBigInt
+  sku              String         @unique @db.VarChar(64)
+  /// số tập; null = sách lẻ
+  volumeNumber     Int?           @map("volume_number") @db.UnsignedSmallInt
+  /// ví dụ "Tập 105"; null thì hiển thị theo product
+  name             String?        @db.VarChar(150)
+  price            BigInt         @db.UnsignedBigInt
+  compareAtPrice   BigInt?        @map("compare_at_price") @db.UnsignedBigInt
+  conditionGrade   ConditionGrade @default(GOOD) @map("condition_grade")
+  /// mô tả tự do: "ố nhẹ gáy, còn bìa rời"
+  conditionNote    String?        @map("condition_note") @db.VarChar(500)
+  /// tồn vật lý
+  stockQuantity    Int            @default(0) @map("stock_quantity")
+  /// đang bị giữ bởi đơn chờ thanh toán
+  reservedQuantity Int            @default(0) @map("reserved_quantity")
+  weightGram       Int?           @map("weight_gram") @db.UnsignedInt
+  imageUrl         String?        @map("image_url") @db.VarChar(500)
+  isActive         Boolean        @default(true) @map("is_active")
+  sortOrder        Int            @default(0) @map("sort_order")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt        DateTime?      @map("deleted_at") @db.DateTime(3)
+
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images            ProductImage[]
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
+  stockReservations StockReservation[]
+  stockMovements    StockMovement[]
+
+  @@unique([productId, volumeNumber], map: "uq_variants_product_volume")
+  @@index([productId, sortOrder], map: "idx_variants_product")
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  productId   BigInt   @map("product_id") @db.UnsignedBigInt
+  /// null = ảnh chung của product
+  variantId   BigInt?  @map("variant_id") @db.UnsignedBigInt
+  url         String   @db.VarChar(500)
+  alt         String?  @db.VarChar(255)
+  /// ảnh chụp thật vs ảnh bìa nhà xuất bản — luôn ưu tiên ảnh thật
+  isRealPhoto Boolean  @default(true) @map("is_real_photo")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder], map: "idx_images_product")
+  @@index([variantId], map: "idx_images_variant")
+  @@map("product_images")
+}
+
+/// N-N: một cuốn có thể vừa "Manga" vừa "Shounen".
+model ProductCategory {
+  productId  BigInt  @map("product_id") @db.UnsignedBigInt
+  categoryId BigInt  @map("category_id") @db.UnsignedBigInt
+  /// dùng cho breadcrumb
+  isPrimary  Boolean @default(false) @map("is_primary")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([categoryId, productId], map: "idx_pc_category")
+  @@map("product_categories")
+}
+
+// ---------------------------------------------------------------------
+// 3. GIỎ HÀNG & YÊU THÍCH
+// ---------------------------------------------------------------------
+
+/// Hỗ trợ cả giỏ khách vãng lai (guestToken trong cookie) lẫn giỏ user.
+/// Khi login: merge guest cart vào user cart rồi xóa guest cart (ở service).
+model Cart {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId     BigInt?   @unique @map("user_id") @db.UnsignedBigInt
+  guestToken String?   @unique @map("guest_token") @db.Char(36)
+  expiresAt  DateTime? @map("expires_at") @db.DateTime(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+/// CỐ TÌNH KHÔNG lưu giá trong giỏ — giá luôn đọc live từ variant lúc
+/// render và lúc checkout, tránh giỏ giữ lâu rồi mua giá cũ.
+model CartItem {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  cartId    BigInt   @map("cart_id") @db.UnsignedBigInt
+  variantId BigInt   @map("variant_id") @db.UnsignedBigInt
+  quantity  Int      @default(1) @db.UnsignedInt
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId], map: "uq_cart_items")
+  @@index([variantId], map: "idx_cart_items_variant")
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt   @map("user_id") @db.UnsignedBigInt
+  productId BigInt   @map("product_id") @db.UnsignedBigInt
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId], map: "uq_wishlist")
+  @@index([productId], map: "idx_wishlist_product")
+  @@map("wishlist_items")
+}
+
+// ---------------------------------------------------------------------
+// 4. ĐƠN HÀNG
+// ---------------------------------------------------------------------
+
+/// Trục giao hàng — người quản (admin đổi tay).
+enum OrderStatus {
+  PENDING_PAYMENT
+  AWAITING_CONFIRMATION
+  CONFIRMED
+  SHIPPING
+  COMPLETED
+  CANCELLED
+}
+
+/// Trục thanh toán — máy quản. CHỈ backend/webhook được đổi, admin không
+/// có quyền set PAID thủ công.
+enum OrderPaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  REFUNDED
+}
+
+model Order {
+  id        BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  /// mã public: ORD10025
+  orderCode String @unique @map("order_code") @db.VarChar(32)
+  userId    BigInt @map("user_id") @db.UnsignedBigInt
+
+  status        OrderStatus        @default(PENDING_PAYMENT)
+  paymentStatus OrderPaymentStatus @default(PENDING) @map("payment_status")
+
+  /// Toàn bộ số tiền do BACKEND tính, không nhận từ client.
+  subtotal      BigInt @default(0) @db.UnsignedBigInt
+  shippingFee   BigInt @default(0) @map("shipping_fee") @db.UnsignedBigInt
+  discountTotal BigInt @default(0) @map("discount_total") @db.UnsignedBigInt
+  grandTotal    BigInt @default(0) @map("grand_total") @db.UnsignedBigInt
+  itemCount     Int    @default(0) @map("item_count") @db.UnsignedInt
+
+  /// SNAPSHOT địa chỉ: copy tại thời điểm đặt, không FK sang Address.
+  receiverName  String  @map("receiver_name") @db.VarChar(150)
+  receiverPhone String  @map("receiver_phone") @db.VarChar(20)
+  receiverEmail String? @map("receiver_email") @db.VarChar(191)
+  province      String  @db.VarChar(100)
+  district      String  @db.VarChar(100)
+  ward          String? @db.VarChar(100)
+  streetAddress String  @map("street_address") @db.VarChar(255)
+  customerNote  String? @map("customer_note") @db.VarChar(500)
+
+  adminNote    String? @map("admin_note") @db.VarChar(500)
+  /// mã vận đơn, nhập sau cũng được
+  trackingCode String? @map("tracking_code") @db.VarChar(100)
+  cancelReason String? @map("cancel_reason") @db.VarChar(500)
+
+  /// hết hạn giữ tồn cho đơn chưa thanh toán
+  stockHoldExpiresAt DateTime? @map("stock_hold_expires_at") @db.DateTime(3)
+  paidAt             DateTime? @map("paid_at") @db.DateTime(3)
+  confirmedAt        DateTime? @map("confirmed_at") @db.DateTime(3)
+  shippedAt          DateTime? @map("shipped_at") @db.DateTime(3)
+  completedAt        DateTime? @map("completed_at") @db.DateTime(3)
+  cancelledAt        DateTime? @map("cancelled_at") @db.DateTime(3)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items             OrderItem[]
+  statusHistories   OrderStatusHistory[]
+  payments          Payment[]
+  stockReservations StockReservation[]
+
+  /// "Đơn hàng của tôi"
+  @@index([userId, createdAt], map: "idx_orders_user")
+  /// hàng đợi admin: paid + chờ xác nhận
+  @@index([paymentStatus, status, createdAt], map: "idx_orders_queue")
+  /// cron nhả tồn đơn quá hạn
+  @@index([paymentStatus, stockHoldExpiresAt], map: "idx_orders_expire")
+  @@map("orders")
+}
+
+/// SNAPSHOT sản phẩm tại thời điểm mua — productId/variantId chỉ để link
+/// tham khảo (có thể null nếu catalog bị dọn), dữ liệu hiển thị đã copy sẵn.
+model OrderItem {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  orderId        BigInt   @map("order_id") @db.UnsignedBigInt
+  productId      BigInt?  @map("product_id") @db.UnsignedBigInt
+  variantId      BigInt?  @map("variant_id") @db.UnsignedBigInt
+  productName    String   @map("product_name") @db.VarChar(255)
+  variantName    String?  @map("variant_name") @db.VarChar(150)
+  sku            String   @db.VarChar(64)
+  conditionGrade String?  @map("condition_grade") @db.VarChar(30)
+  imageUrl       String?  @map("image_url") @db.VarChar(500)
+  /// giá tại thời điểm mua — KHÔNG BAO GIỜ đổi
+  unitPrice      BigInt   @map("unit_price") @db.UnsignedBigInt
+  quantity       Int      @db.UnsignedInt
+  lineTotal      BigInt   @map("line_total") @db.UnsignedBigInt
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId], map: "idx_order_items_order")
+  @@index([variantId], map: "idx_order_items_variant")
+  @@map("order_items")
+}
+
+enum StatusHistoryTrack {
+  PAYMENT
+  FULFILLMENT
+}
+
+enum StatusHistoryActorType {
+  SYSTEM
+  WEBHOOK
+  ADMIN
+  CUSTOMER
+}
+
+/// Audit trail: ai đổi trạng thái gì, lúc nào — cần khi khách khiếu nại.
+model OrderStatusHistory {
+  id          BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  orderId     BigInt                 @map("order_id") @db.UnsignedBigInt
+  track       StatusHistoryTrack
+  fromStatus  String?                @map("from_status") @db.VarChar(40)
+  toStatus    String                 @map("to_status") @db.VarChar(40)
+  actorType   StatusHistoryActorType @map("actor_type")
+  actorUserId BigInt?                @map("actor_user_id") @db.UnsignedBigInt
+  note        String?                @db.VarChar(500)
+  createdAt   DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorUser User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt], map: "idx_osh_order")
+  @@map("order_status_histories")
+}
+
+// ---------------------------------------------------------------------
+// 5. TỒN KHO
+// ---------------------------------------------------------------------
+
+enum StockReservationStatus {
+  HELD
+  COMMITTED
+  RELEASED
+}
+
+/// Giữ tồn cho đơn chưa thanh toán. Tạo order: reservedQuantity += qty +
+/// tạo reservation HELD. PAID: COMMITTED (trừ stockQuantity, giảm reserved).
+/// Hết hạn/hủy: RELEASED (chỉ giảm reserved).
+model StockReservation {
+  id        BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  orderId   BigInt                 @map("order_id") @db.UnsignedBigInt
+  variantId BigInt                 @map("variant_id") @db.UnsignedBigInt
+  quantity  Int                    @db.UnsignedInt
+  status    StockReservationStatus @default(HELD)
+  expiresAt DateTime               @map("expires_at") @db.DateTime(3)
+  createdAt DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime               @updatedAt @map("updated_at") @db.DateTime(3)
+
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, variantId], map: "uq_reservation")
+  /// cron quét đơn quá hạn
+  @@index([status, expiresAt], map: "idx_reservation_sweep")
+  @@index([variantId, status], map: "idx_reservation_variant")
+  @@map("stock_reservations")
+}
+
+enum StockMovementType {
+  IMPORT
+  SALE
+  RETURN
+  ADJUSTMENT
+  CANCEL_RESTOCK
+}
+
+/// Sổ cái tồn kho — mọi thay đổi stockQuantity đều ghi 1 dòng. Khi số tồn
+/// "sai" (chuyện chắc chắn xảy ra), đây là thứ cứu bạn.
+model StockMovement {
+  id             BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  variantId      BigInt            @map("variant_id") @db.UnsignedBigInt
+  type           StockMovementType
+  /// âm = giảm tồn
+  quantityChange Int               @map("quantity_change")
+  quantityAfter  Int               @map("quantity_after")
+  /// "ORDER" / "MANUAL" / ...
+  referenceType  String?           @map("reference_type") @db.VarChar(50)
+  referenceId    BigInt?           @map("reference_id") @db.UnsignedBigInt
+  note           String?           @db.VarChar(500)
+  createdBy      BigInt?           @map("created_by") @db.UnsignedBigInt
+  createdAt      DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  creator User?          @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([variantId, createdAt], map: "idx_movements_variant")
+  @@index([referenceType, referenceId], map: "idx_movements_ref")
+  @@map("stock_movements")
+}
+
+// ---------------------------------------------------------------------
+// 6. THANH TOÁN SEPAY
+// ---------------------------------------------------------------------
+
+enum PaymentProvider {
+  SEPAY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
+/// Một order có thể có nhiều payment (đơn cũ hết hạn, sinh QR mới) nhưng
+/// tối đa 1 payment PENDING tại một thời điểm (enforce ở service).
+model Payment {
+  id              BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  orderId         BigInt          @map("order_id") @db.UnsignedBigInt
+  /// nội dung chuyển khoản, ví dụ DH10025 — DUY NHẤT, khóa để khớp webhook
+  paymentCode     String          @unique @map("payment_code") @db.VarChar(32)
+  provider        PaymentProvider @default(SEPAY)
+  /// phải khớp orders.grandTotal
+  amount          BigInt          @db.UnsignedBigInt
+  status          PaymentStatus   @default(PENDING)
+  /// snapshot cấu hình lúc tạo QR
+  bankCode        String?         @map("bank_code") @db.VarChar(50)
+  bankAccountNo   String?         @map("bank_account_no") @db.VarChar(50)
+  bankAccountName String?         @map("bank_account_name") @db.VarChar(150)
+  /// VietQR đã điền sẵn amount + content
+  qrUrl           String?         @map("qr_url") @db.VarChar(1000)
+  paidAmount      BigInt?         @map("paid_amount") @db.UnsignedBigInt
+  paidAt          DateTime?       @map("paid_at") @db.DateTime(3)
+  expiresAt       DateTime?       @map("expires_at") @db.DateTime(3)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+
+  order        Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transactions PaymentTransaction[]
+
+  @@index([orderId, status], map: "idx_payments_order")
+  @@index([status, expiresAt], map: "idx_payments_expire")
+  @@map("payments")
+}
+
+enum MatchStatus {
+  MATCHED
+  UNMATCHED
+  AMOUNT_MISMATCH
+  DUPLICATE
+  ALREADY_PAID
+}
+
+/// MỌI webhook nhận được đều ghi vào đây, kể cả khi không khớp order nào.
+/// uq_txn_provider_external chính là cơ chế IDEMPOTENT: SePay gửi lại
+/// nhiều lần thì các lần sau dính duplicate key -> bỏ qua, trả 200.
+model PaymentTransaction {
+  id                    BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  provider              PaymentProvider @default(SEPAY)
+  /// id giao dịch từ SePay
+  externalTransactionId String          @map("external_transaction_id") @db.VarChar(100)
+  /// null = chưa khớp được order
+  paymentId             BigInt?         @map("payment_id") @db.UnsignedBigInt
+  gatewayAccountNo      String?         @map("gateway_account_no") @db.VarChar(50)
+  amountIn              BigInt          @default(0) @map("amount_in") @db.UnsignedBigInt
+  amountOut             BigInt          @default(0) @map("amount_out") @db.UnsignedBigInt
+  accumulated           BigInt?         @db.UnsignedBigInt
+  /// nội dung CK thô, để dò payment_code
+  transferContent       String?         @map("transfer_content") @db.VarChar(500)
+  matchedPaymentCode    String?         @map("matched_payment_code") @db.VarChar(32)
+  matchStatus           MatchStatus     @default(UNMATCHED) @map("match_status")
+  /// thời điểm ngân hàng ghi nhận
+  transactionDate       DateTime?       @map("transaction_date") @db.DateTime(3)
+  /// giữ nguyên payload để đối soát/replay
+  rawPayload            Json            @map("raw_payload")
+  receivedAt            DateTime        @default(now()) @map("received_at") @db.DateTime(3)
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, externalTransactionId], map: "uq_txn_provider_external")
+  @@index([paymentId], map: "idx_txn_payment")
+  @@index([matchedPaymentCode], map: "idx_txn_code")
+  /// màn hình đối soát của admin
+  @@index([matchStatus, receivedAt], map: "idx_txn_status")
+  @@map("payment_transactions")
+}
+
+// ---------------------------------------------------------------------
+// 7. YÊU CẦU BÁN SÁCH (THU MUA)
+// ---------------------------------------------------------------------
+
+enum SellRequestStatus {
+  NEW
+  CONTACTED
+  COMPLETED
+  CANCELLED
+}
+
+/// Không bắt buộc đăng nhập -> userId nullable. Không có quy trình định
+/// giá tự động — shop nhận yêu cầu rồi gọi điện trao đổi ngoài hệ thống.
+model SellRequest {
+  id               BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  /// mã public để khách tra cứu
+  code             String            @unique @db.VarChar(32)
+  userId           BigInt?           @map("user_id") @db.UnsignedBigInt
+  fullName         String            @map("full_name") @db.VarChar(150)
+  phone            String            @db.VarChar(20)
+  email            String?           @db.VarChar(191)
+  /// khu vực / tỉnh thành
+  area             String?           @db.VarChar(150)
+  bookDescription  String            @map("book_description") @db.Text
+  quantityEstimate Int?              @map("quantity_estimate") @db.UnsignedInt
+  expectedPrice    BigInt?           @map("expected_price") @db.UnsignedBigInt
+  status           SellRequestStatus @default(NEW)
+  adminNote        String?           @map("admin_note") @db.VarChar(1000)
+  handledBy        BigInt?           @map("handled_by") @db.UnsignedBigInt
+  handledAt        DateTime?         @map("handled_at") @db.DateTime(3)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+
+  user    User?              @relation("SellRequestUser", fields: [userId], references: [id], onDelete: SetNull)
+  handler User?              @relation("SellRequestHandler", fields: [handledBy], references: [id], onDelete: SetNull)
+  images  SellRequestImage[]
+
+  @@index([status, createdAt], map: "idx_sell_status")
+  @@index([phone], map: "idx_sell_phone")
+  @@map("sell_requests")
+}
+
+model SellRequestImage {
+  id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  sellRequestId BigInt   @map("sell_request_id") @db.UnsignedBigInt
+  url           String   @db.VarChar(500)
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  sellRequest SellRequest @relation(fields: [sellRequestId], references: [id], onDelete: Cascade)
+
+  @@index([sellRequestId, sortOrder], map: "idx_sri_request")
+  @@map("sell_request_images")
+}
+
+// ---------------------------------------------------------------------
+// 8. NỘI DUNG (CMS ĐƠN GIẢN)
+// ---------------------------------------------------------------------
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Post {
+  id           BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  title        String     @db.VarChar(255)
+  slug         String     @unique @db.VarChar(191)
+  excerpt      String?    @db.VarChar(500)
+  content      String?    @db.LongText
+  thumbnailUrl String?    @map("thumbnail_url") @db.VarChar(500)
+  status       PostStatus @default(DRAFT)
+  authorId     BigInt?    @map("author_id") @db.UnsignedBigInt
+  viewCount    Int        @default(0) @map("view_count") @db.UnsignedInt
+  publishedAt  DateTime?  @map("published_at") @db.DateTime(3)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt    DateTime?  @map("deleted_at") @db.DateTime(3)
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt], map: "idx_posts_public")
+  @@map("posts")
+}
+
+/// Trang tĩnh: giới thiệu, chính sách giao hàng/đổi trả/bảo mật, liên hệ.
+model Page {
+  id              BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  title           String   @db.VarChar(255)
+  slug            String   @unique @db.VarChar(191)
+  content         String?  @db.LongText
+  metaDescription String?  @map("meta_description") @db.VarChar(300)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@map("pages")
+}
+
+enum BannerPosition {
+  HOME_HERO
+  HOME_SUB
+  SIDEBAR
+}
+
+model Banner {
+  id        BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  title     String?        @db.VarChar(255)
+  imageUrl  String         @map("image_url") @db.VarChar(500)
+  linkUrl   String?        @map("link_url") @db.VarChar(500)
+  position  BannerPosition @default(HOME_HERO)
+  sortOrder Int            @default(0) @map("sort_order")
+  isActive  Boolean        @default(true) @map("is_active")
+  startAt   DateTime?      @map("start_at") @db.DateTime(3)
+  endAt     DateTime?      @map("end_at") @db.DateTime(3)
+  createdAt DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@index([position, isActive, sortOrder], map: "idx_banners_display")
+  @@map("banners")
+}
+
+// ---------------------------------------------------------------------
+// 9. CÀI ĐẶT
+// ---------------------------------------------------------------------
+
+enum SettingValueType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+/// Key-value cho thông tin shop, tài khoản nhận tiền, phí ship, thời gian
+/// giữ tồn... SECRET của SePay nên nằm ở ENV; nếu buộc lưu DB thì mã hóa
+/// ở tầng app và isSecret = true để API trả về dạng che (****1234).
+model Setting {
+  id         BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  /// shop | bank | sepay | shipping | order
+  groupName  String           @map("group_name") @db.VarChar(50)
+  settingKey String           @unique @map("setting_key") @db.VarChar(100)
+  value      String?          @db.Text
+  valueType  SettingValueType @default(STRING) @map("value_type")
+  isSecret   Boolean          @default(false) @map("is_secret")
+  updatedBy  BigInt?          @map("updated_by") @db.UnsignedBigInt
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+
+  updater User? @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([groupName], map: "idx_settings_group")
+  @@map("settings")
+}
