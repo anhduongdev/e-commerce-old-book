@@ -7,6 +7,11 @@ Comic Store — e-commerce bán truyện/sách cũ. Đọc file này trước kh
 Next.js (App Router) + TS + Tailwind (frontend) · NestJS + TS (backend) · MySQL 8/Docker · Prisma qua `PrismaService`.
 KHÔNG dùng: Nx, Turborepo, Microservices, K8s, Redux/Zustand mặc định, React Hook Form mặc định, Repository Pattern mặc định.
 
+## Quy trình & ưu tiên
+
+Requirement → hiểu hệ thống hiện có (trace luồng/code liên quan trước khi sửa) → chọn thiết kế đơn giản nhất đáp ứng đúng yêu cầu → implement → verify → soát lại scope.
+Ưu tiên khi có đánh đổi: Correctness → Security/Data integrity → Maintainability → Performance → Simplicity. Không hy sinh maintainability để tối ưu performance sớm; chỉ tối ưu khi có bottleneck/inefficiency rõ ràng.
+
 ## Structure
 
 Frontend (khung có sẵn, `features/<domain>/` chỉ tạo khi module đó được yêu cầu):
@@ -62,6 +67,12 @@ Quy tắc:
 Tách component khi: có thể tái sử dụng · một phần UI có nhiệm vụ rõ ràng · file bắt đầu dài/khó đọc (fetch+filter+modal+form+table+logic dồn 1 file) · có state/logic riêng.
 KHÔNG tách mỗi `<div>`, KHÔNG tách `ProductTitle`/`ProductPrice`... nếu chỉ vài dòng không logic/tái sử dụng. Ưu tiên dễ đọc hơn nhiều file.
 
+## Rendering & SEO (frontend)
+
+Ưu tiên Server Component; chỉ thêm `"use client"` khi thực sự cần state/effect/event handler/browser API. Tránh fetch/render dư thừa và duplicate request.
+Trang public (product/category/content) phải index được mặc định trừ khi có lý do nghiệp vụ để `noindex` (cart/checkout/account/search/utility pages luôn `noindex`). Dùng Next.js Metadata API cho title/description/OG/canonical; nội dung chính (đặc biệt product page) phải render ở server, có mặt trong initial HTML — không phụ thuộc client-only rendering.
+Semantic HTML + heading hợp lý; cân nhắc structured data (Product/Offer/BreadcrumbList) khi dữ liệu cho phép. Có `sitemap.xml`/`robots.txt`, chỉ chứa URL canonical/indexable. Ảnh khai báo kích thước rõ ràng (tránh layout shift), alt text đúng nội dung (ảnh trang trí: alt rỗng).
+
 ## Backend: Service Layer + DI
 
 `Controller → Service → Prisma`. Controller chỉ nhận request/validate(DTO)/gọi service/trả response — KHÔNG business logic dài, KHÔNG query Prisma trực tiếp. Service chứa business logic, gọi `PrismaService`.
@@ -88,10 +99,13 @@ Constructor injection cho mọi provider, KHÔNG `new Service()` thủ công. DT
 - Prefix `/api`, RESTful (`GET/POST/PATCH/DELETE /products`, không `/getAllProducts`). Health: `GET /api/health` → `{status:"ok"}`.
 - DTO dùng `class-validator`+`class-transformer`. Global `ValidationPipe({whitelist,transform,forbidNonWhitelisted:true})`.
 - Lỗi HTTP dùng exception NestJS (`BadRequestException`, `NotFoundException`...), KHÔNG `throw new Error()`.
+- Sửa API (route/payload/response) → kiểm tra và cập nhật frontend consumer liên quan, giữ contract khớp nhau.
 
 ## Security
 
 - Không tin dữ liệu nhạy cảm từ frontend: `price`, `total`, `stock`, `payment status`, `userId`, `role` — backend luôn tự xác định (frontend chỉ gửi intent: `productId`+`quantity`).
+- Authorization luôn kiểm tra ở backend; frontend guard chỉ phục vụ UX, không phải cơ chế bảo mật.
+- Invariant nghiệp vụ quan trọng phải được bảo vệ ở backend/DB (vd: stock không âm, paid order không tự quay lại pending, cancelled order không tự thành paid).
 - Payment chỉ SePay, frontend không được tự set `payment=paid`. Flow: Order → Pending Payment → VietQR → SePay Webhook → Backend verify → Paid.
 - Upload (khi implement): validate MIME+size, không tin extension client, generate filename riêng, lưu URL trong DB.
 - Không hard-code secret — dùng env var, chỉ commit `.env.example`. Không log password/token/secret. Không `console.log()` rải rác — dùng NestJS `Logger`.
@@ -109,9 +123,9 @@ Backend: `products/{products.module.ts, products.controller.ts, products.service
 
 ## AI CODING RULES
 
-**Trước khi code**: đọc AGENTS.md → xem cấu trúc/module hiện có → tìm code sẵn có trước khi tạo file mới, không tạo duplicate implementation → không đổi kiến trúc nếu task không yêu cầu.
+**Trước khi code**: đọc AGENTS.md → xem cấu trúc/module hiện có, trace luồng code liên quan đến task → tìm/tái sử dụng implementation sẵn có trước khi tạo file mới, không tạo duplicate → không đổi kiến trúc nếu task không yêu cầu.
 
-**Trong khi code**: đặt file đúng module, không over-engineer, không tự thêm feature/package (nếu cần package mới phải có lý do rõ ràng), không sửa file không liên quan.
+**Trong khi code**: đặt file đúng module, không over-engineer, không tự thêm feature/package/module ngoài yêu cầu (vd task chỉ về Product thì không lan sang Cart/Order/Payment/Auth; cần package mới phải có lý do rõ ràng), không sửa file không liên quan.
 
 **Sau khi code — checklist bắt buộc**:
 1. Lint pass
@@ -120,4 +134,6 @@ Backend: `products/{products.module.ts, products.controller.ts, products.service
 4. Không import lỗi / unused code
 5. API và frontend khớp nhau (endpoint, payload)
 6. Không secret hard-code
-7. Tóm tắt file đã tạo/sửa
+7. Task liên quan DB → kiểm tra lại schema/migration
+8. Soát lại thay đổi ngoài scope yêu cầu (file/module không liên quan bị sửa)
+9. Tóm tắt file đã tạo/sửa và lý do
