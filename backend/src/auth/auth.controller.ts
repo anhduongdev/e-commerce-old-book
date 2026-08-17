@@ -9,11 +9,10 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, SESSION_COOKIE_NAME } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-
-const SESSION_COOKIE_NAME = 'session_token';
+import { getSessionCookie } from './session-cookie.util';
 
 @Controller('auth')
 export class AuthController {
@@ -49,19 +48,14 @@ export class AuthController {
 
   @Get('me')
   me(@Req() req: Request) {
-    return this.authService.me(this.getSessionCookie(req));
+    return this.authService.me(getSessionCookie(req));
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    await this.authService.logout(this.getSessionCookie(req));
+    await this.authService.logout(getSessionCookie(req));
     res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
     return { success: true };
-  }
-
-  private getSessionCookie(req: Request): string | undefined {
-    const cookies = req.cookies as Record<string, string> | undefined;
-    return cookies?.[SESSION_COOKIE_NAME];
   }
 }

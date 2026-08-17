@@ -148,6 +148,8 @@ model Category {
   imageUrl    String?  @map("image_url") @db.VarChar(500)
   sortOrder   Int      @default(0) @map("sort_order")
   isActive    Boolean  @default(true) @map("is_active")
+  isFeatured     Boolean @default(false) @map("is_featured")
+  searchKeywords Json?   @map("search_keywords")
   createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.DateTime(3)
 
@@ -156,6 +158,7 @@ model Category {
   productCategories ProductCategory[]
 
   @@index([parentId, sortOrder], map: "idx_categories_parent")
+  @@index([isFeatured, sortOrder], map: "idx_categories_featured")
   @@map("categories")
 }
 

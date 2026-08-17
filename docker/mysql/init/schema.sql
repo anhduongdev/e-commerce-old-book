@@ -134,11 +134,14 @@ CREATE TABLE `categories` (
   `image_url`   VARCHAR(500)    NULL,
   `sort_order`  INT             NOT NULL DEFAULT 0,
   `is_active`   TINYINT(1)      NOT NULL DEFAULT 1,
+  `is_featured` TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'hiển thị ở widget/khu vực nổi bật trang chủ',
+  `search_keywords` JSON        NULL COMMENT 'mảng từ khóa hỗ trợ tìm kiếm, vd ["sách","truyện"]',
   `created_at`  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at`  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_categories_slug` (`slug`),
   KEY `idx_categories_parent` (`parent_id`, `sort_order`),
+  KEY `idx_categories_featured` (`is_featured`, `sort_order`),
   CONSTRAINT `fk_categories_parent` FOREIGN KEY (`parent_id`) REFERENCES `categories`(`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 

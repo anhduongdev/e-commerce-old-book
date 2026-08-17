@@ -24,3 +24,7 @@ coverage/
 
 # prisma generated client (regenerated via `prisma generate`)
 generated/
+
+# user-uploaded files (backend/uploads/**, keep the folder via .gitkeep)
+backend/uploads/*
+!backend/uploads/.gitkeep

@@ -12,6 +12,8 @@ import { PrismaService } from '../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
+export const SESSION_COOKIE_NAME = 'session_token';
+
 const BCRYPT_SALT_ROUNDS = 12;
 const SESSION_TTL_DAYS = 30;
 const INVALID_CREDENTIALS_MESSAGE =
@@ -119,7 +121,7 @@ export class AuthService {
   }
 
   async me(rawToken?: string) {
-    const user = await this.getValidSession(rawToken);
+    const user = await this.validateSession(rawToken);
     if (!user) {
       throw new UnauthorizedException();
     }
@@ -137,7 +139,7 @@ export class AuthService {
     });
   }
 
-  private async getValidSession(rawToken?: string): Promise<User | null> {
+  async validateSession(rawToken?: string): Promise<User | null> {
     if (!rawToken) {
       return null;
     }
