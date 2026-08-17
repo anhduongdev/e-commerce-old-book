@@ -12,6 +12,8 @@ import {
   Truck,
 } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
+import { AccountMenu } from "@/features/auth/components/AccountMenu";
+import { getCurrentUser } from "@/features/auth/services/session";
 
 const PROMO_ITEMS = [
   { icon: Truck, label: "Miễn phí vận chuyển cho đơn từ 200.000đ" },
@@ -37,7 +39,9 @@ const NAV_LINKS = [
   { href: "/ban-sach-cho-shop", label: "Bán sách cho shop", icon: Tag },
 ];
 
-export function Header() {
+export async function Header() {
+  const user = await getCurrentUser();
+
   return (
     <header className="border-b border-brand-100">
       <div className="hidden bg-brand-900 text-white md:block">
@@ -55,7 +59,7 @@ export function Header() {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-4">
           <Logo />
 
-          <div className="flex min-w-[240px] flex-1 items-center overflow-hidden rounded-full border border-brand-100 bg-white">
+          <div className="flex min-w-[180px] flex-1 items-center overflow-hidden rounded-full border border-brand-100 bg-white">
             <input
               type="search"
               placeholder="Tìm kiếm sách, tác giả, thể loại..."
@@ -83,24 +87,28 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-6">
-            <Link
-              href="/login"
-              className="flex items-center gap-2 text-sm text-brand-900"
-            >
-              <span className="relative block h-9 w-9 shrink-0 overflow-hidden rounded-full border border-brand-100 bg-cream-dark">
-                <Image
-                  src="/logo-icon.png"
-                  alt="Tài khoản"
-                  fill
-                  sizes="36px"
-                  className="object-contain p-0.5"
-                />
-              </span>
-              <span className="flex flex-col leading-tight">
-                <span className="text-xs text-brand-600">Tài khoản</span>
-                <span className="font-medium">Đăng nhập</span>
-              </span>
-            </Link>
+            {user ? (
+              <AccountMenu user={user} />
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-2 text-sm text-brand-900"
+              >
+                <span className="relative block h-9 w-9 shrink-0 overflow-hidden rounded-full border border-brand-100 bg-cream-dark">
+                  <Image
+                    src="/logo-icon.png"
+                    alt="Tài khoản"
+                    fill
+                    sizes="36px"
+                    className="object-contain p-0.5"
+                  />
+                </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="text-xs text-brand-600">Tài khoản</span>
+                  <span className="font-medium">Đăng nhập</span>
+                </span>
+              </Link>
+            )}
 
             <Link
               href="/gio-hang"
@@ -121,13 +129,13 @@ export function Header() {
         </div>
       </div>
 
-      <nav className="bg-brand-900 text-white">
+      <nav className="border-t border-brand-100 bg-cream text-brand-900">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-1 px-4">
           {NAV_LINKS.map(({ href, label, icon: Icon, hasDropdown }) => (
             <div key={href} className="group relative">
               <Link
                 href={href}
-                className="flex items-center gap-2 px-4 py-3 text-sm transition-colors hover:bg-brand-700"
+                className="flex items-center gap-2 px-4 py-3 text-sm transition-colors hover:bg-brand-50"
               >
                 {Icon ? <Icon size={16} aria-hidden="true" /> : null}
                 {label}

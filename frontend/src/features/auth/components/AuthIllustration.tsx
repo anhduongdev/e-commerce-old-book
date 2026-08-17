@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-export function RegisterIllustration() {
+export function AuthIllustration() {
   return (
     <div className="relative hidden overflow-hidden rounded-2xl bg-cream lg:block">
       <Image

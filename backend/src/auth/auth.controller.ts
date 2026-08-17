@@ -1,6 +1,19 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+
+const SESSION_COOKIE_NAME = 'session_token';
 
 @Controller('auth')
 export class AuthController {
@@ -10,5 +23,45 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { user, rawToken, expiresAt } = await this.authService.login(dto, {
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.cookie(SESSION_COOKIE_NAME, rawToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      expires: expiresAt,
+    });
+
+    return user;
+  }
+
+  @Get('me')
+  me(@Req() req: Request) {
+    return this.authService.me(this.getSessionCookie(req));
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(this.getSessionCookie(req));
+    res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
+    return { success: true };
+  }
+
+  private getSessionCookie(req: Request): string | undefined {
+    const cookies = req.cookies as Record<string, string> | undefined;
+    return cookies?.[SESSION_COOKIE_NAME];
   }
 }

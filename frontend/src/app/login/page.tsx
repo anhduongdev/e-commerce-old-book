@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { RegisterForm } from "@/features/auth/components/RegisterForm";
+import { LoginForm } from "@/features/auth/components/LoginForm";
 import { AuthIllustration } from "@/features/auth/components/AuthIllustration";
 import { getCurrentUser } from "@/features/auth/services/session";
 
 export const metadata: Metadata = {
-  title: "Đăng ký tài khoản",
+  title: "Đăng nhập",
   robots: { index: false, follow: false },
 };
 
-export default async function RegisterPage() {
+export default async function LoginPage() {
   const user = await getCurrentUser();
   if (user) {
     redirect("/");
@@ -23,11 +23,11 @@ export default async function RegisterPage() {
           Trang chủ
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-brand-900">Đăng ký</span>
+        <span className="text-brand-900">Đăng nhập</span>
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <RegisterForm />
+        <LoginForm />
         <AuthIllustration />
       </div>
     </div>
