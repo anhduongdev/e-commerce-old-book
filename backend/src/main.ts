@@ -19,7 +19,7 @@ async function bootstrap() {
     origin: configService.get<string>('frontendUrl'),
   });
 
-  const port = configService.get<number>('port') ?? 3001;
+  const port = configService.get<number>('port') ?? 3002;
   await app.listen(port);
 }
 void bootstrap();
