@@ -40,14 +40,14 @@ dụng cho VPS Ubuntu 22.04/24.04.
   qua dòng lệnh.
 - **SSH**: cách bạn "kết nối từ xa" vào VPS để gõ lệnh, giống Remote Desktop nhưng chỉ có
   terminal chữ, không có màn hình đồ hoạ.
-- **Domain & DNS**: domain (`yourdomain.com`) là cái tên; DNS là "danh bạ điện thoại" ánh xạ
+- **Domain & DNS**: domain (`tiemsachxua.site`) là cái tên; DNS là "danh bạ điện thoại" ánh xạ
   tên đó sang IP VPS. Sau khi sửa DNS phải đợi nó **lan truyền** (propagate) đi khắp nơi
   trên mạng — có thể vài phút, có thể vài giờ.
 - **PM2**: một "process manager" cho Node.js — giữ cho `node dist/main.js` (backend) và
   `next start` (frontend) luôn chạy nền, tự khởi động lại nếu app crash, và tự chạy lại khi
   VPS reboot. Thay thế vai trò mà trước đây Docker `restart: unless-stopped` đảm nhiệm.
 - **Nginx (reverse proxy)**: một "lễ tân" đứng giữa internet và các app Node đang chạy ở các
-  cổng nội bộ (3000, 3002). Mọi request tới `yourdomain.com` đều gõ cửa Nginx trước; Nginx đọc
+  cổng nội bộ (3000, 3002). Mọi request tới `tiemsachxua.site` đều gõ cửa Nginx trước; Nginx đọc
   **đường dẫn** (`/api/...` hay không) rồi chuyển tiếp (proxy) vào đúng cổng nội bộ tương ứng,
   đồng thời lo luôn HTTPS/SSL. Project này dùng **1 domain duy nhất** (không có subdomain
   `api.`) — frontend và backend cùng chạy chung sau lưng 1 domain, phân biệt nhau bằng path.
@@ -85,20 +85,20 @@ Cần có sẵn 4 thứ:
 Project dùng **1 domain duy nhất** — không cần subdomain `api.` riêng, vì frontend và backend
 cùng chạy sau lưng 1 domain, Nginx phân biệt nhau bằng path (`/api/...` → backend, còn lại →
 frontend, xem [Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot)). Vào trang quản lý DNS của
-domain, thêm **2 bản ghi A** trỏ về IP VPS — domain gốc và `www` (thay `yourdomain.com` bằng
-domain thật, thay `VPS_IP` bằng IP thật):
+domain, thêm **2 bản ghi A** trỏ về IP VPS — domain gốc và `www` (domain dùng ở đây là
+`tiemsachxua.site`, thay `VPS_IP` bằng IP thật của VPS):
 
 | Loại | Tên/Host | Giá trị/Value | Ý nghĩa |
 | --- | --- | --- | --- |
-| A | `@` | `VPS_IP` | `yourdomain.com` — domain chính, phục vụ toàn bộ app |
-| A | `www` | `VPS_IP` | `www.yourdomain.com` — chỉ để redirect về domain chính |
+| A | `@` | `VPS_IP` | `tiemsachxua.site` — domain chính, phục vụ toàn bộ app |
+| A | `www` | `VPS_IP` | `www.tiemsachxua.site` — chỉ để redirect về domain chính |
 
 - **Vì sao có `www` nếu domain chính đã là `@`?**: chỉ để hứng người dùng lỡ gõ
-  `www.yourdomain.com` (thói quen cũ, hoặc gõ tự động của trình duyệt) — Nginx sẽ cấu hình
+  `www.tiemsachxua.site` (thói quen cũ, hoặc gõ tự động của trình duyệt) — Nginx sẽ cấu hình
   `www` **redirect 301** sang domain gốc ([Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot)), chứ
   không phục vụ nội dung riêng. Không bắt buộc phải có bản ghi này, nhưng nếu đã trỏ sẵn (như
   trong ảnh bạn gửi) thì tận dụng luôn, tránh lỗi "trang không tồn tại" khi ai đó gõ `www.`.
-- **`yourdomain.com` (không `www`) là domain chính (canonical)** dùng xuyên suốt hướng dẫn —
+- **`tiemsachxua.site` (không `www`) là domain chính (canonical)** dùng xuyên suốt hướng dẫn —
   mọi giá trị `FRONTEND_URL`, `NEXT_PUBLIC_API_URL` ở Phase 6 đều dùng dạng không-`www`.
 
 > **DNS trỏ xong không có nghĩa là VPS đã "nhận" được request** — bản ghi A chỉ giúp trình
@@ -118,7 +118,7 @@ cho bản ghi MX/email). TTL để mặc định là được.
 **Kiểm tra đã lan truyền chưa** (chạy trên máy bạn, PowerShell cũng được):
 
 ```bash
-nslookup yourdomain.com
+nslookup tiemsachxua.site
 ```
 
 Kỳ vọng thấy dòng `Address:` là đúng IP VPS. Nếu ra IP khác hoặc báo không tìm thấy — DNS
@@ -170,23 +170,13 @@ apt update && apt upgrade -y
   Nếu có dòng hỏi `Restart services during package upgrades without asking?` → chọn `Yes`
   (Tab để chọn, Enter để xác nhận).
 
-Tạo user thường thay vì dùng `root` cho công việc hằng ngày (an toàn hơn — lỡ gõ nhầm lệnh
-nguy hiểm cũng không phá được toàn hệ thống):
-
-```bash
-adduser deploy
-```
-
-- **Kỳ vọng**: hỏi đặt mật khẩu mới (gõ 2 lần để xác nhận), rồi hỏi Full Name/Room
-  Number/Work Phone... — **Enter bỏ qua hết**, chỉ mật khẩu là bắt buộc. Cuối cùng hỏi
-  `Is the information correct? [Y/n]` → gõ `Y`.
-
-```bash
-usermod -aG sudo deploy
-```
-
-- **Lệnh này làm gì**: thêm user `deploy` vào group `sudo`, để sau này gõ `sudo <lệnh>` thì
-  lệnh đó chạy với quyền root — không cần login thẳng bằng root mọi lúc.
+> **Về việc dùng thẳng `root`**: hướng dẫn gốc khuyến nghị tạo user thường (`deploy`) cho công
+> việc hằng ngày, an toàn hơn vì lỡ gõ nhầm lệnh nguy hiểm cũng không phá được toàn hệ thống.
+> Hướng dẫn này chọn **dùng thẳng `root` cho toàn bộ các bước** (đơn giản hơn khi chỉ có 1
+> mình quản lý VPS) — mọi lệnh `sudo <lệnh>` bên dưới vẫn chạy được bình thường dưới `root`
+> (chỉ là dư thừa, không cần `sudo` cũng chạy y hệt), không cần bỏ đi. Nếu sau này muốn tách
+> user riêng cho an toàn hơn, có thể quay lại làm `adduser deploy` + `usermod -aG sudo deploy`
+> bất kỳ lúc nào.
 
 Bật firewall — **làm đúng thứ tự dưới đây, sai thứ tự sẽ tự khoá luôn SSH của chính mình**:
 
@@ -214,22 +204,14 @@ ufw status
 
 Kỳ vọng thấy `Status: active` và danh sách `22`, `80`, `443` đều `ALLOW`.
 
-Đăng xuất khỏi root, SSH lại bằng user `deploy` — từ đây về sau **dùng user `deploy` cho mọi
-lệnh còn lại** trong hướng dẫn này:
-
-```bash
-exit
-```
-
-```bash
-ssh deploy@VPS_IP
-```
+Từ đây về sau, hướng dẫn này **dùng thẳng user `root` cho mọi lệnh còn lại** — không cần
+đăng xuất hay đổi user.
 
 ---
 
 ## 4. Cài Node.js, MySQL, Nginx, PM2, Certbot
 
-Vẫn đang là user `deploy`.
+Vẫn đang là user `root`.
 
 ### Node.js 20
 
@@ -390,7 +372,7 @@ nano backend/.env
 ```dotenv
 PORT=3002
 DATABASE_URL="mysql://comic_user:STRONG_PASSWORD@localhost:3306/comic_store"
-FRONTEND_URL="https://yourdomain.com"
+FRONTEND_URL="https://tiemsachxua.site"
 NODE_ENV=production
 ```
 
@@ -410,7 +392,7 @@ nano frontend/.env.production.local
 ```
 
 ```dotenv
-NEXT_PUBLIC_API_URL="https://yourdomain.com/api"
+NEXT_PUBLIC_API_URL="https://tiemsachxua.site/api"
 ```
 
 - **`.env.production.local`**: Next.js tự động đọc file này khi chạy `npm run build` (build
@@ -483,16 +465,19 @@ Cho PM2 tự khởi động lại 2 app này khi VPS reboot:
 
 ```bash
 pm2 save
-pm2 startup systemd -u deploy --hp /home/deploy
+pm2 startup systemd -u root --hp /root
 ```
 
 - **`pm2 save`**: lưu danh sách process đang chạy (`comic-backend`, `comic-frontend`) vào
   file để khôi phục sau này.
 - **`pm2 startup ...`**: in ra **một dòng lệnh `sudo env PATH=... pm2 startup systemd -u
-  deploy --hp /home/deploy`** — copy nguyên dòng đó và chạy tiếp (đây là bước bắt buộc,
-  lệnh gốc chỉ tạo ra lệnh cần chạy chứ chưa tự chạy). Sau đó chạy lại `pm2 save` một lần
-  nữa để chắc chắn danh sách được lưu vào service vừa đăng ký.
-- **Kỳ vọng kiểm tra**: `sudo systemctl status pm2-deploy` hiện `active (running)`.
+  root --hp /root`** — copy nguyên dòng đó và chạy tiếp (đây là bước bắt buộc, lệnh gốc chỉ
+  tạo ra lệnh cần chạy chứ chưa tự chạy). Sau đó chạy lại `pm2 save` một lần nữa để chắc
+  chắn danh sách được lưu vào service vừa đăng ký.
+- **Kỳ vọng kiểm tra**: `sudo systemctl status pm2-root` hiện `Loaded: ... enabled`. Dòng
+  `Active` lúc này thường là `inactive (dead)` — service chỉ chạy 1 lần lúc VPS thật sự
+  khởi động lại (`pm2 resurrect` khôi phục danh sách process đã `pm2 save`), không phải
+  service chạy nền liên tục, nên `inactive` ở đây không phải lỗi.
 
 ---
 
@@ -502,15 +487,15 @@ Chỉ cần **1 file cấu hình Nginx**, chứa 2 `server` block: block chính 
 path (`/api/...` → backend), block phụ chỉ để redirect `www` về domain chính.
 
 ```bash
-sudo nano /etc/nginx/sites-available/yourdomain.com
+sudo nano /etc/nginx/sites-available/tiemsachxua.site
 ```
 
-Dán nội dung sau (thay **cả 3 chỗ** `yourdomain.com` bằng domain thật):
+Dán nội dung sau (domain dùng ở đây là `tiemsachxua.site`, đã điền sẵn ở cả 3 chỗ):
 
 ```nginx
 server {
     listen 80;
-    server_name yourdomain.com;
+    server_name tiemsachxua.site;
 
     location /api/ {
         proxy_pass http://127.0.0.1:3002;
@@ -542,12 +527,12 @@ server {
 
 server {
     listen 80;
-    server_name www.yourdomain.com;
-    return 301 https://yourdomain.com$request_uri;
+    server_name www.tiemsachxua.site;
+    return 301 https://tiemsachxua.site$request_uri;
 }
 ```
 
-- **`location /api/`**: mọi request tới `yourdomain.com/api/...` chuyển vào cổng `3002` —
+- **`location /api/`**: mọi request tới `tiemsachxua.site/api/...` chuyển vào cổng `3002` —
   đúng nơi `comic-backend` đang chạy (khớp `PORT=3002` trong `backend/.env`). Backend đã tự
   gắn prefix `api` cho toàn bộ route của nó (`app.setGlobalPrefix('api')` trong
   `backend/src/main.ts`), nên đường dẫn không bị lệch khi Nginx forward nguyên `/api/...`
@@ -559,15 +544,15 @@ server {
   `comic-frontend` (`next start`) đang chạy.
 - **Thứ tự 3 block trong `server` đầu không quan trọng** — Nginx tự chọn block khớp path dài
   nhất trước (`/api/`, `/uploads/` luôn thắng `/` bất kể đứng trước hay sau trong file).
-- **`server` thứ 2 (`www.yourdomain.com`)**: chỉ để redirect người lỡ gõ `www.` về domain
+- **`server` thứ 2 (`www.tiemsachxua.site`)**: chỉ để redirect người lỡ gõ `www.` về domain
   chính, **không** phục vụ nội dung riêng — tránh session/cookie bị tách rời giữa 2 dạng
-  domain (cookie đặt ở `yourdomain.com` sẽ không tự có hiệu lực trên `www.yourdomain.com` nếu
+  domain (cookie đặt ở `tiemsachxua.site` sẽ không tự có hiệu lực trên `www.tiemsachxua.site` nếu
   không redirect). Bỏ qua block này nếu bạn không tạo bản ghi DNS `www` ở Phase 2.
 
 Kích hoạt site vừa tạo (tạo symlink từ `sites-available` sang `sites-enabled`):
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/yourdomain.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/tiemsachxua.site /etc/nginx/sites-enabled/
 ```
 
 Kiểm tra cú pháp rồi áp dụng:
@@ -580,7 +565,7 @@ sudo systemctl reload nginx
 - **`nginx -t`**: kỳ vọng thấy `syntax is ok` và `test is successful`. Nếu báo lỗi — đọc
   thông báo, thường là gõ thiếu dấu `;` hoặc `{` `}` không khớp trong file vừa tạo.
 
-Mở `http://yourdomain.com` và `http://yourdomain.com/api/health` bằng trình duyệt — kỳ vọng
+Mở `http://tiemsachxua.site` và `http://tiemsachxua.site/api/health` bằng trình duyệt — kỳ vọng
 đã thấy nội dung trả về qua HTTP (chưa có ổ khoá HTTPS, bước tiếp theo mới bật).
 
 - **Nếu ra `502 Bad Gateway`** — PM2 process tương ứng chưa chạy hoặc crash, kiểm tra lại
@@ -591,15 +576,15 @@ Mở `http://yourdomain.com` và `http://yourdomain.com/api/health` bằng trìn
 ### Xin SSL
 
 ```bash
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+sudo certbot --nginx -d tiemsachxua.site -d www.tiemsachxua.site
 ```
 
 - **Lệnh này làm gì**: Certbot xác thực quyền sở hữu cả 2 domain qua cổng 80, xin 1 chứng chỉ
-  SSL dùng chung cho cả `yourdomain.com` và `www.yourdomain.com`, rồi **tự động sửa** cả 2
+  SSL dùng chung cho cả `tiemsachxua.site` và `www.tiemsachxua.site`, rồi **tự động sửa** cả 2
   `server` block trong file cấu hình Nginx vừa tạo để thêm `listen 443 ssl`, đường dẫn chứng
   chỉ, và redirect HTTP → HTTPS (block `www` vẫn giữ nguyên hành vi redirect sang domain
   chính, chỉ thêm SSL để redirect an toàn ngay cả khi ai đó gõ `https://www...` trực tiếp).
-- **Nếu bạn không tạo bản ghi DNS `www`** ở Phase 2 — bỏ `-d www.yourdomain.com` và bỏ luôn
+- **Nếu bạn không tạo bản ghi DNS `www`** ở Phase 2 — bỏ `-d www.tiemsachxua.site` và bỏ luôn
   `server` block thứ 2 ở bước trên.
 - **Lần đầu chạy sẽ hỏi**:
   - Email — dùng để Let's Encrypt gửi cảnh báo trước khi chứng chỉ hết hạn.
@@ -607,7 +592,7 @@ sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
   - Có muốn share email cho EFF không → tuỳ chọn, `Y` hoặc `N` đều được.
 - **Kỳ vọng**: kết thúc bằng thông báo `Successfully deployed certificate` cho cả 2 domain.
 - **Nếu lỗi khi xin SSL**:
-  - **DNS chưa lan truyền** — quay lại `nslookup yourdomain.com` kiểm tra, đợi thêm rồi chạy
+  - **DNS chưa lan truyền** — quay lại `nslookup tiemsachxua.site` kiểm tra, đợi thêm rồi chạy
     lại đúng lệnh trên.
   - **Cổng 80 bị chặn** — Let's Encrypt xác thực qua HTTP (cổng 80) tới đúng IP domain trỏ
     tới. Kiểm tra `ufw status` đã allow 80, và firewall riêng của nhà cung cấp VPS (Security
@@ -631,13 +616,13 @@ sudo systemctl status certbot.timer
 Test bằng `curl` (chạy trên máy bạn hoặc VPS đều được):
 
 ```bash
-curl -I https://yourdomain.com/api/health
+curl -I https://tiemsachxua.site/api/health
 ```
 
 Kỳ vọng dòng đầu tiên là `HTTP/2 200`. Nếu muốn xem nội dung trả về:
 
 ```bash
-curl https://yourdomain.com/api/health
+curl https://tiemsachxua.site/api/health
 ```
 
 Kỳ vọng: `{"status":"ok"}`.
@@ -645,24 +630,24 @@ Kỳ vọng: `{"status":"ok"}`.
 Nếu có tạo bản ghi `www`, kiểm tra redirect hoạt động đúng:
 
 ```bash
-curl -I https://www.yourdomain.com
+curl -I https://www.tiemsachxua.site
 ```
 
-Kỳ vọng thấy `HTTP/2 301` và dòng `location: https://yourdomain.com/`.
+Kỳ vọng thấy `HTTP/2 301` và dòng `location: https://tiemsachxua.site/`.
 
-Mở `https://yourdomain.com` bằng trình duyệt — trang chủ phải hiện **Backend: connected**.
+Mở `https://tiemsachxua.site` bằng trình duyệt — trang chủ phải hiện **Backend: connected**.
 Nếu hiện lỗi kết nối, mở DevTools (F12) → tab **Console**/**Network** xem lỗi cụ thể:
 
 - Lỗi `Failed to fetch` / `404` tới `/api/...` → block `location /api/` trong cấu hình
   Nginx sai, hoặc `comic-backend` chưa chạy — xem lại Phase 6–7.
 - Lỗi liên quan **CORS** (`has been blocked by CORS policy`) — khó xảy ra vì frontend/backend
-  giờ cùng chung 1 origin (`https://yourdomain.com`), nhưng nếu vẫn thấy, kiểm tra lại
-  `FRONTEND_URL` trong `backend/.env` có khớp chính xác `https://yourdomain.com` không, sửa
+  giờ cùng chung 1 origin (`https://tiemsachxua.site`), nhưng nếu vẫn thấy, kiểm tra lại
+  `FRONTEND_URL` trong `backend/.env` có khớp chính xác `https://tiemsachxua.site` không, sửa
   rồi `pm2 restart comic-backend` (không cần build lại, chỉ restart vì đây là biến đọc lúc
   chạy, không phải lúc build).
 
 Thử **đăng ký** rồi **đăng nhập** trên trang — sau đăng nhập, mở F12 → tab **Application**
-(Chrome/Edge) hoặc **Storage** (Firefox) → **Cookies** → chọn domain `yourdomain.com` → tìm
+(Chrome/Edge) hoặc **Storage** (Firefox) → **Cookies** → chọn domain `tiemsachxua.site` → tìm
 dòng `session_token`. Kỳ vọng thấy cột `Secure` = true, `HttpOnly` = true.
 
 ---
@@ -714,9 +699,13 @@ pm2 logs comic-backend --lines 50
 
 ```bash
 mkdir -p ~/backups
-mysqldump -u comic_user -p comic_store > ~/backups/backup-$(date +%F).sql
+mysqldump -u comic_user -p --no-tablespaces comic_store > ~/backups/backup-$(date +%F).sql
 ```
 
+- **`--no-tablespaces`**: bắt buộc phải có — mặc định `mysqldump` cố dump luôn metadata
+  tablespace, thao tác đó cần quyền `PROCESS` (quyền toàn cục), trong khi `comic_user` chỉ
+  được cấp quyền scope trong `comic_store.*` ở Phase 5. Thiếu cờ này sẽ báo lỗi
+  `Access denied; you need (at least one of) the PROCESS privilege(s)`.
 - **Lệnh này làm gì**: xuất toàn bộ database `comic_store` ra dạng SQL text, ghi ra file tên
   `backup-2026-08-18.sql` (ngày hiện tại) trong `~/backups`.
 - **Kỳ vọng**: file `.sql` tạo ra có dung lượng > 0 byte (`ls -lh ~/backups/backup-*.sql` để
@@ -750,7 +739,7 @@ password=STRONG_PASSWORD
 chmod 600 ~/.my.cnf
 ```
 
-- **`chmod 600`**: chỉ user `deploy` đọc/ghi được file này — bắt buộc vì file chứa mật khẩu
+- **`chmod 600`**: chỉ user `root` đọc/ghi được file này — bắt buộc vì file chứa mật khẩu
   dạng plain text.
 
 ```bash
@@ -763,7 +752,7 @@ crontab -e
   thoát `Ctrl+X`:
 
 ```
-0 2 * * * mysqldump comic_store > /home/deploy/backups/backup-$(date +\%F).sql 2>> /home/deploy/backups/backup.log
+0 2 * * * mysqldump --no-tablespaces comic_store > /root/backups/backup-$(date +\%F).sql 2>> /root/backups/backup.log
 ```
 
 - Không cần `-u`/`-p` nữa vì `mysqldump` tự đọc `~/.my.cnf`.
@@ -811,7 +800,7 @@ Chạy trong thư mục `~/comic-store` trừ khi ghi chú khác.
 | Lưu danh sách process hiện tại cho PM2 startup | `pm2 save` |
 | Xem log Nginx | `sudo tail -f /var/log/nginx/error.log` |
 | Kiểm tra cú pháp + áp dụng cấu hình Nginx mới | `sudo nginx -t && sudo systemctl reload nginx` |
-| Backup database thủ công | `mysqldump -u comic_user -p comic_store > backup.sql` |
+| Backup database thủ công | `mysqldump -u comic_user -p --no-tablespaces comic_store > backup.sql` |
 | Đăng nhập MySQL | `mysql -u comic_user -p comic_store` |
 | Xem dung lượng đĩa còn lại | `df -h` |
 | Xem RAM đang dùng | `free -h` |
