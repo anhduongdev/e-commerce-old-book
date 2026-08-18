@@ -47,9 +47,10 @@ dụng cho VPS Ubuntu 22.04/24.04.
   `next start` (frontend) luôn chạy nền, tự khởi động lại nếu app crash, và tự chạy lại khi
   VPS reboot. Thay thế vai trò mà trước đây Docker `restart: unless-stopped` đảm nhiệm.
 - **Nginx (reverse proxy)**: một "lễ tân" đứng giữa internet và các app Node đang chạy ở các
-  cổng nội bộ (3000, 3002). Request tới `yourdomain.com` hay `api.yourdomain.com` đều gõ cửa
-  Nginx trước, Nginx đọc domain rồi chuyển tiếp (proxy) vào đúng cổng nội bộ, đồng thời lo
-  luôn HTTPS/SSL.
+  cổng nội bộ (3000, 3002). Mọi request tới `yourdomain.com` đều gõ cửa Nginx trước; Nginx đọc
+  **đường dẫn** (`/api/...` hay không) rồi chuyển tiếp (proxy) vào đúng cổng nội bộ tương ứng,
+  đồng thời lo luôn HTTPS/SSL. Project này dùng **1 domain duy nhất** (không có subdomain
+  `api.`) — frontend và backend cùng chạy chung sau lưng 1 domain, phân biệt nhau bằng path.
 - **Certbot**: công cụ xin chứng chỉ SSL miễn phí từ Let's Encrypt, tích hợp thẳng với Nginx
   — tự sửa file cấu hình Nginx để bật HTTPS, không cần thao tác thủ công.
 
@@ -81,24 +82,38 @@ Cần có sẵn 4 thứ:
 
 ## 2. Trỏ DNS về VPS
 
-Vào trang quản lý DNS của domain, thêm 2 bản ghi **A** trỏ về IP VPS (thay `yourdomain.com`
-bằng domain thật, thay `VPS_IP` bằng IP thật):
+Project dùng **1 domain duy nhất** — không cần subdomain `api.` riêng, vì frontend và backend
+cùng chạy sau lưng 1 domain, Nginx phân biệt nhau bằng path (`/api/...` → backend, còn lại →
+frontend, xem [Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot)). Vào trang quản lý DNS của
+domain, thêm **2 bản ghi A** trỏ về IP VPS — domain gốc và `www` (thay `yourdomain.com` bằng
+domain thật, thay `VPS_IP` bằng IP thật):
 
-| Loại | Host/Name | Value/Points to | Ý nghĩa |
+| Loại | Tên/Host | Giá trị/Value | Ý nghĩa |
 | --- | --- | --- | --- |
-| A | `@` | `VPS_IP` | `yourdomain.com` → frontend |
-| A | `api` | `VPS_IP` | `api.yourdomain.com` → backend |
+| A | `@` | `VPS_IP` | `yourdomain.com` — domain chính, phục vụ toàn bộ app |
+| A | `www` | `VPS_IP` | `www.yourdomain.com` — chỉ để redirect về domain chính |
+
+- **Vì sao có `www` nếu domain chính đã là `@`?**: chỉ để hứng người dùng lỡ gõ
+  `www.yourdomain.com` (thói quen cũ, hoặc gõ tự động của trình duyệt) — Nginx sẽ cấu hình
+  `www` **redirect 301** sang domain gốc ([Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot)), chứ
+  không phục vụ nội dung riêng. Không bắt buộc phải có bản ghi này, nhưng nếu đã trỏ sẵn (như
+  trong ảnh bạn gửi) thì tận dụng luôn, tránh lỗi "trang không tồn tại" khi ai đó gõ `www.`.
+- **`yourdomain.com` (không `www`) là domain chính (canonical)** dùng xuyên suốt hướng dẫn —
+  mọi giá trị `FRONTEND_URL`, `NEXT_PUBLIC_API_URL` ở Phase 6 đều dùng dạng không-`www`.
 
 > **DNS trỏ xong không có nghĩa là VPS đã "nhận" được request** — bản ghi A chỉ giúp trình
 > duyệt biết cần gửi request tới IP nào, giống như biết địa chỉ nhà nhưng chưa chắc có ai ra
 > mở cửa. Phía VPS còn cần 2 việc nữa mới thực sự trả lời được: mở cổng 80/443 ở firewall
 > ([Phase 3](#3-ssh-vào-vps-lần-đầu--bảo-mật-cơ-bản)), và có Nginx lắng nghe + biết ánh xạ
-> đúng domain vào đúng app ([Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot)). Thiếu 1 trong 2,
+> đúng path vào đúng app ([Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot)). Thiếu 1 trong 2,
 > trình duyệt sẽ báo timeout hoặc connection refused dù `nslookup` đã ra đúng IP.
 
 Giao diện mỗi nhà cung cấp domain khác nhau nhưng đều có mục **DNS / DNS Records / Zone
-Editor**. Trường "Host"/"Name" nhập `@` (nghĩa là chính domain gốc) hoặc `api` (thành
-subdomain), trường "Value"/"Points to"/"Content" nhập IP VPS. TTL để mặc định là được.
+Editor**. Trường "Tên"/"Host"/"Name" nhập `@` (nghĩa là chính domain gốc — một số nhà cung
+cấp cho để trống thay vì `@`, tuỳ giao diện). Trường "Loại"/"Type" chọn **A** (không phải
+`NS` — `NS` dùng cho việc khác, trỏ máy chủ DNS, không phải trỏ IP). Trường
+"Giá trị"/"Value"/"Points to" nhập IP VPS. Trường "Độ ưu tiên"/"Priority" để trống (chỉ dùng
+cho bản ghi MX/email). TTL để mặc định là được.
 
 **Kiểm tra đã lan truyền chưa** (chạy trên máy bạn, PowerShell cũng được):
 
@@ -395,7 +410,7 @@ nano frontend/.env.production.local
 ```
 
 ```dotenv
-NEXT_PUBLIC_API_URL="https://api.yourdomain.com/api"
+NEXT_PUBLIC_API_URL="https://yourdomain.com/api"
 ```
 
 - **`.env.production.local`**: Next.js tự động đọc file này khi chạy `npm run build` (build
@@ -483,18 +498,37 @@ pm2 startup systemd -u deploy --hp /home/deploy
 
 ## 7. Cấu hình Nginx + SSL bằng Certbot
 
-Tạo file cấu hình cho frontend:
+Chỉ cần **1 file cấu hình Nginx**, chứa 2 `server` block: block chính phân biệt request bằng
+path (`/api/...` → backend), block phụ chỉ để redirect `www` về domain chính.
 
 ```bash
 sudo nano /etc/nginx/sites-available/yourdomain.com
 ```
 
-Dán nội dung sau (thay `yourdomain.com` bằng domain thật):
+Dán nội dung sau (thay **cả 3 chỗ** `yourdomain.com` bằng domain thật):
 
 ```nginx
 server {
     listen 80;
     server_name yourdomain.com;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -505,39 +539,35 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-```
 
-Tạo file cấu hình cho backend (domain `api.`):
-
-```bash
-sudo nano /etc/nginx/sites-available/api.yourdomain.com
-```
-
-```nginx
 server {
     listen 80;
-    server_name api.yourdomain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:3002;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    server_name www.yourdomain.com;
+    return 301 https://yourdomain.com$request_uri;
 }
 ```
 
-- **`proxy_pass http://127.0.0.1:3000`/`3002`**: đúng cổng nội bộ mà PM2 đang chạy
-  `comic-frontend`/`comic-backend` — khớp với `PORT=3002` trong `backend/.env` và cổng mặc
-  định 3000 của `next start`.
+- **`location /api/`**: mọi request tới `yourdomain.com/api/...` chuyển vào cổng `3002` —
+  đúng nơi `comic-backend` đang chạy (khớp `PORT=3002` trong `backend/.env`). Backend đã tự
+  gắn prefix `api` cho toàn bộ route của nó (`app.setGlobalPrefix('api')` trong
+  `backend/src/main.ts`), nên đường dẫn không bị lệch khi Nginx forward nguyên `/api/...`
+  sang backend.
+- **`location /uploads/`**: ảnh upload (danh mục, sản phẩm...) do backend serve tĩnh từ thư
+  mục `backend/uploads/`, cũng cần trỏ vào cổng `3002` — thiếu block này thì ảnh sẽ ra lỗi
+  404 dù API vẫn chạy bình thường.
+- **`location /`**: mọi request còn lại (trang HTML, JS, CSS...) chuyển vào cổng `3000` — nơi
+  `comic-frontend` (`next start`) đang chạy.
+- **Thứ tự 3 block trong `server` đầu không quan trọng** — Nginx tự chọn block khớp path dài
+  nhất trước (`/api/`, `/uploads/` luôn thắng `/` bất kể đứng trước hay sau trong file).
+- **`server` thứ 2 (`www.yourdomain.com`)**: chỉ để redirect người lỡ gõ `www.` về domain
+  chính, **không** phục vụ nội dung riêng — tránh session/cookie bị tách rời giữa 2 dạng
+  domain (cookie đặt ở `yourdomain.com` sẽ không tự có hiệu lực trên `www.yourdomain.com` nếu
+  không redirect). Bỏ qua block này nếu bạn không tạo bản ghi DNS `www` ở Phase 2.
 
-Kích hoạt 2 site vừa tạo (tạo symlink từ `sites-available` sang `sites-enabled`):
+Kích hoạt site vừa tạo (tạo symlink từ `sites-available` sang `sites-enabled`):
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/yourdomain.com /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/api.yourdomain.com /etc/nginx/sites-enabled/
 ```
 
 Kiểm tra cú pháp rồi áp dụng:
@@ -550,8 +580,8 @@ sudo systemctl reload nginx
 - **`nginx -t`**: kỳ vọng thấy `syntax is ok` và `test is successful`. Nếu báo lỗi — đọc
   thông báo, thường là gõ thiếu dấu `;` hoặc `{` `}` không khớp trong file vừa tạo.
 
-Mở `http://yourdomain.com` và `http://api.yourdomain.com/api/health` bằng trình duyệt — kỳ
-vọng đã thấy nội dung trả về qua HTTP (chưa có ổ khoá HTTPS, bước tiếp theo mới bật).
+Mở `http://yourdomain.com` và `http://yourdomain.com/api/health` bằng trình duyệt — kỳ vọng
+đã thấy nội dung trả về qua HTTP (chưa có ổ khoá HTTPS, bước tiếp theo mới bật).
 
 - **Nếu ra `502 Bad Gateway`** — PM2 process tương ứng chưa chạy hoặc crash, kiểm tra lại
   `pm2 status` và `pm2 logs`.
@@ -561,12 +591,16 @@ vọng đã thấy nội dung trả về qua HTTP (chưa có ổ khoá HTTPS, b�
 ### Xin SSL
 
 ```bash
-sudo certbot --nginx -d yourdomain.com -d api.yourdomain.com
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
 ```
 
-- **Lệnh này làm gì**: Certbot xác thực quyền sở hữu domain qua cổng 80, xin 1 chứng chỉ SSL
-  dùng chung cho cả 2 domain, rồi **tự động sửa** 2 file cấu hình Nginx vừa tạo để thêm
-  `listen 443 ssl`, đường dẫn chứng chỉ, và redirect HTTP → HTTPS.
+- **Lệnh này làm gì**: Certbot xác thực quyền sở hữu cả 2 domain qua cổng 80, xin 1 chứng chỉ
+  SSL dùng chung cho cả `yourdomain.com` và `www.yourdomain.com`, rồi **tự động sửa** cả 2
+  `server` block trong file cấu hình Nginx vừa tạo để thêm `listen 443 ssl`, đường dẫn chứng
+  chỉ, và redirect HTTP → HTTPS (block `www` vẫn giữ nguyên hành vi redirect sang domain
+  chính, chỉ thêm SSL để redirect an toàn ngay cả khi ai đó gõ `https://www...` trực tiếp).
+- **Nếu bạn không tạo bản ghi DNS `www`** ở Phase 2 — bỏ `-d www.yourdomain.com` và bỏ luôn
+  `server` block thứ 2 ở bước trên.
 - **Lần đầu chạy sẽ hỏi**:
   - Email — dùng để Let's Encrypt gửi cảnh báo trước khi chứng chỉ hết hạn.
   - Đồng ý Terms of Service → gõ `Y`.
@@ -574,14 +608,14 @@ sudo certbot --nginx -d yourdomain.com -d api.yourdomain.com
 - **Kỳ vọng**: kết thúc bằng thông báo `Successfully deployed certificate` cho cả 2 domain.
 - **Nếu lỗi khi xin SSL**:
   - **DNS chưa lan truyền** — quay lại `nslookup yourdomain.com` kiểm tra, đợi thêm rồi chạy
-    lại đúng lệnh trên (Certbot tự nhận ra chứng chỉ nào đã có, chỉ xin thêm cái thiếu).
+    lại đúng lệnh trên.
   - **Cổng 80 bị chặn** — Let's Encrypt xác thực qua HTTP (cổng 80) tới đúng IP domain trỏ
     tới. Kiểm tra `ufw status` đã allow 80, và firewall riêng của nhà cung cấp VPS (Security
     Group) cũng đã mở 80/443.
   - **Domain đang dùng Cloudflare proxy (đám mây cam)** — chuyển về xám (DNS only) như lưu ý
     ở Phase 2, thử lại, có thể bật cam lại sau khi có SSL.
   - **Đã xin cert cho domain này ở nơi khác trước đó, bị giới hạn rate limit của Let's
-    Encrypt** (5 lần/tuần cho cùng domain) — đợi hoặc dùng domain/subdomain khác thử trước.
+    Encrypt** (5 lần/tuần cho cùng domain) — đợi hoặc thử lại sau.
 
 Chứng chỉ Let's Encrypt hết hạn sau 90 ngày nhưng Certbot tự cài sẵn 1 cron/systemd timer gia
 hạn tự động — không cần làm gì thêm. Kiểm tra timer đang bật:
@@ -597,34 +631,39 @@ sudo systemctl status certbot.timer
 Test bằng `curl` (chạy trên máy bạn hoặc VPS đều được):
 
 ```bash
-curl -I https://api.yourdomain.com/api/health
+curl -I https://yourdomain.com/api/health
 ```
 
 Kỳ vọng dòng đầu tiên là `HTTP/2 200`. Nếu muốn xem nội dung trả về:
 
 ```bash
-curl https://api.yourdomain.com/api/health
+curl https://yourdomain.com/api/health
 ```
 
 Kỳ vọng: `{"status":"ok"}`.
 
+Nếu có tạo bản ghi `www`, kiểm tra redirect hoạt động đúng:
+
+```bash
+curl -I https://www.yourdomain.com
+```
+
+Kỳ vọng thấy `HTTP/2 301` và dòng `location: https://yourdomain.com/`.
+
 Mở `https://yourdomain.com` bằng trình duyệt — trang chủ phải hiện **Backend: connected**.
 Nếu hiện lỗi kết nối, mở DevTools (F12) → tab **Console**/**Network** xem lỗi cụ thể:
 
-- Lỗi liên quan **CORS** (`has been blocked by CORS policy`) → `FRONTEND_URL` trong
-  `backend/.env` không khớp chính xác origin đang mở — sửa lại rồi
-  `pm2 restart comic-backend` (không cần build lại, chỉ restart vì đây là biến đọc lúc chạy,
-  không phải lúc build).
-- Lỗi `Failed to fetch` / `ERR_CONNECTION_REFUSED` tới domain api → cấu hình Nginx cho backend
-  chưa đúng, hoặc `comic-backend` chưa chạy — xem lại Phase 6–7.
+- Lỗi `Failed to fetch` / `404` tới `/api/...` → block `location /api/` trong cấu hình
+  Nginx sai, hoặc `comic-backend` chưa chạy — xem lại Phase 6–7.
+- Lỗi liên quan **CORS** (`has been blocked by CORS policy`) — khó xảy ra vì frontend/backend
+  giờ cùng chung 1 origin (`https://yourdomain.com`), nhưng nếu vẫn thấy, kiểm tra lại
+  `FRONTEND_URL` trong `backend/.env` có khớp chính xác `https://yourdomain.com` không, sửa
+  rồi `pm2 restart comic-backend` (không cần build lại, chỉ restart vì đây là biến đọc lúc
+  chạy, không phải lúc build).
 
 Thử **đăng ký** rồi **đăng nhập** trên trang — sau đăng nhập, mở F12 → tab **Application**
 (Chrome/Edge) hoặc **Storage** (Firefox) → **Cookies** → chọn domain `yourdomain.com` → tìm
 dòng `session_token`. Kỳ vọng thấy cột `Secure` = true, `HttpOnly` = true.
-
-Cookie hoạt động xuyên được 2 subdomain (`yourdomain.com` và `api.yourdomain.com`) vì
-`sameSite: 'lax'` coi các subdomain cùng domain gốc là "same-site" — không cần cấu hình gì
-thêm cho việc này.
 
 ---
 
@@ -749,9 +788,9 @@ cài **một lần**. Project mới sau này chỉ cần:
    riêng.
 3. Thêm entry mới vào `ecosystem.config.js` của project đó (cổng nội bộ khác, ví dụ 4000/4002
    để không đụng cổng của Comic Store), `pm2 start` + `pm2 save`.
-4. Thêm 2 file cấu hình Nginx mới trong `/etc/nginx/sites-available/` (domain mới, `proxy_pass`
-   trỏ tới cổng nội bộ mới), `ln -s` sang `sites-enabled`, `certbot --nginx -d ...` cho domain
-   mới.
+4. Thêm 1 file cấu hình Nginx mới trong `/etc/nginx/sites-available/` (domain mới, các
+   `location` trỏ tới cổng nội bộ mới — giống cấu trúc ở Phase 7), `ln -s` sang
+   `sites-enabled`, `certbot --nginx -d ...` cho domain mới.
 
 Không cần đụng vào cấu hình Nginx, PM2 app, hay database của Comic Store.
 
