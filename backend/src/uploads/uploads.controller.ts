@@ -31,4 +31,18 @@ export class UploadsController {
     }
     return this.uploadsService.saveCategoryImage(file);
   }
+
+  @Post('series/images')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+    }),
+  )
+  uploadSeriesImage(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Thiếu file ảnh');
+    }
+    return this.uploadsService.saveSeriesImage(file);
+  }
 }

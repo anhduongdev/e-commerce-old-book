@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CategoriesModule } from './categories/categories.module';
+import { SeriesModule } from './series/series.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { DatabaseModule } from './database/database.module';
 import configuration from './config/configuration';
@@ -17,6 +18,7 @@ import configuration from './config/configuration';
     DatabaseModule,
     AuthModule,
     CategoriesModule,
+    SeriesModule,
     UploadsModule,
   ],
   controllers: [AppController],
