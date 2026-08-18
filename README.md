@@ -105,6 +105,7 @@ project-root/
 ## Files quan trọng
 
 - `AGENTS.md` — quy tắc kiến trúc, coding convention, quy tắc dành cho AI khi phát triển tiếp project. Đọc trước khi thêm code mới.
+- `DEPLOY.md` — hướng dẫn setup VPS và deploy lên server (lần đầu và các lần sau).
 - `docker-compose.yml` — chạy MySQL 8 kèm healthcheck và named volume `mysql_data`.
 - `backend/src/database/` — `PrismaService` dùng Dependency Injection của NestJS, các module khác inject `PrismaService` thay vì tạo `PrismaClient` riêng.
 - `frontend/src/features/` — nơi chính chứa code theo nghiệp vụ khi các module (products, cart, orders...) được implement.
