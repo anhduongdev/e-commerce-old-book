@@ -1,11 +1,17 @@
 # Deploy Comic Store lên VPS
 
-Hướng dẫn triển khai Comic Store lên VPS bằng Docker + Nginx Proxy Manager, viết chi tiết
-từng lệnh — kể cả bạn chưa từng làm sysadmin cũng làm theo được. Áp dụng cho VPS Ubuntu
-22.04/24.04.
+Hướng dẫn triển khai Comic Store lên VPS bằng **PM2 + Nginx + MySQL cài trực tiếp** (không
+Docker), viết chi tiết từng lệnh — kể cả bạn chưa từng làm sysadmin cũng làm theo được. Áp
+dụng cho VPS Ubuntu 22.04/24.04.
 
-> Máy dev local **không cần Docker**, không đổi gì cả — vẫn dùng MySQL cài trực tiếp +
-> HeidiSQL như đang làm (xem README.md). Toàn bộ nội dung dưới đây chỉ áp dụng cho VPS.
+> **Vì sao không dùng Docker ở VPS?** VPS cấu hình thấp (1–2GB RAM) chạy thêm Docker daemon +
+> mỗi service một container riêng (kèm layer hệ điều hành riêng) tốn thêm RAM đáng kể so với
+> chạy Node.js/MySQL/Nginx trực tiếp trên VPS. Đổi lại bạn tự quản lý version Node/MySQL cài
+> trên máy (không "đóng hộp" như Docker), nhưng với 1 project trên VPS thì đánh đổi này đáng
+> để tiết kiệm bộ nhớ.
+
+> Máy dev local **không đổi gì cả** — vẫn dùng MySQL cài trực tiếp + HeidiSQL như đang làm
+> (xem README.md). Toàn bộ nội dung dưới đây chỉ áp dụng cho VPS.
 
 ## Mục lục
 
@@ -13,12 +19,12 @@ từng lệnh — kể cả bạn chưa từng làm sysadmin cũng làm theo đ�
 - [1. Trước khi bắt đầu](#1-trước-khi-bắt-đầu)
 - [2. Trỏ DNS về VPS](#2-trỏ-dns-về-vps)
 - [3. SSH vào VPS lần đầu + bảo mật cơ bản](#3-ssh-vào-vps-lần-đầu--bảo-mật-cơ-bản)
-- [4. Cài Docker](#4-cài-docker)
-- [5. Nginx Proxy Manager](#5-nginx-proxy-manager-reverse-proxy-dùng-chung)
+- [4. Cài Node.js, MySQL, Nginx, PM2, Certbot](#4-cài-nodejs-mysql-nginx-pm2-certbot)
+- [5. Tạo database MySQL](#5-tạo-database-mysql)
 - [6. Deploy Comic Store (lần đầu)](#6-deploy-comic-store-lần-đầu)
-- [7. Tạo Proxy Host + SSL](#7-tạo-proxy-host--ssl-trong-nginx-proxy-manager)
+- [7. Cấu hình Nginx + SSL bằng Certbot](#7-cấu-hình-nginx--ssl-bằng-certbot)
 - [8. Kiểm tra sau deploy](#8-kiểm-tra-sau-deploy)
-- [9. Deploy các lần sau](#9-deploy-các-lần-sau-cập-nhật-code)
+- [9. Deploy các lần sau (cập nhật code)](#9-deploy-các-lần-sau-cập-nhật-code)
 - [10. Backup / restore database](#10-backup--restore-database)
 - [11. Thêm project thứ 2 trên cùng VPS](#11-thêm-project-thứ-2-trên-cùng-vps)
 - [12. Bảng lệnh tra cứu nhanh](#12-bảng-lệnh-tra-cứu-nhanh)
@@ -31,21 +37,21 @@ từng lệnh — kể cả bạn chưa từng làm sysadmin cũng làm theo đ�
 
 - **VPS**: một máy tính Linux thuê từ xa, có địa chỉ IP riêng, bạn có toàn quyền (root) như
   ngồi trước máy đó. Khác Shared Hosting ở chỗ không có cPanel/giao diện sẵn — mọi thứ làm
-  qua dòng lệnh (trừ khi tự cài thêm giao diện quản lý).
+  qua dòng lệnh.
 - **SSH**: cách bạn "kết nối từ xa" vào VPS để gõ lệnh, giống Remote Desktop nhưng chỉ có
   terminal chữ, không có màn hình đồ hoạ.
 - **Domain & DNS**: domain (`yourdomain.com`) là cái tên; DNS là "danh bạ điện thoại" ánh xạ
   tên đó sang IP VPS. Sau khi sửa DNS phải đợi nó **lan truyền** (propagate) đi khắp nơi
   trên mạng — có thể vài phút, có thể vài giờ.
-- **Docker / container**: đóng gói app cùng mọi thứ nó cần (đúng version Node, thư viện hệ
-  thống...) thành một "hộp" chạy độc lập, không phụ thuộc phần mềm cài sẵn trên VPS. Nhờ vậy
-  nhiều project khác nhau, cần version Node/MySQL khác nhau, có thể chạy chung 1 VPS mà
-  không đụng nhau.
-- **Docker Compose**: công cụ mô tả nhiều container (mysql, backend, frontend) trong 1 file
-  `.yml`, rồi khởi động/tắt tất cả bằng 1 lệnh thay vì gõ `docker run` nhiều lần.
-- **Reverse proxy (Nginx Proxy Manager)**: một "lễ tân" đứng giữa internet và các container.
-  Request tới `yourdomain.com` hay `api.yourdomain.com` đều gõ cửa lễ tân này trước, lễ tân
-  đọc domain rồi chuyển tiếp (forward) vào đúng container, đồng thời lo luôn HTTPS/SSL.
+- **PM2**: một "process manager" cho Node.js — giữ cho `node dist/main.js` (backend) và
+  `next start` (frontend) luôn chạy nền, tự khởi động lại nếu app crash, và tự chạy lại khi
+  VPS reboot. Thay thế vai trò mà trước đây Docker `restart: unless-stopped` đảm nhiệm.
+- **Nginx (reverse proxy)**: một "lễ tân" đứng giữa internet và các app Node đang chạy ở các
+  cổng nội bộ (3000, 3002). Request tới `yourdomain.com` hay `api.yourdomain.com` đều gõ cửa
+  Nginx trước, Nginx đọc domain rồi chuyển tiếp (proxy) vào đúng cổng nội bộ, đồng thời lo
+  luôn HTTPS/SSL.
+- **Certbot**: công cụ xin chứng chỉ SSL miễn phí từ Let's Encrypt, tích hợp thẳng với Nginx
+  — tự sửa file cấu hình Nginx để bật HTTPS, không cần thao tác thủ công.
 
 ### Cách dùng `nano` (trình soạn thảo trong terminal)
 
@@ -83,6 +89,13 @@ bằng domain thật, thay `VPS_IP` bằng IP thật):
 | A | `@` | `VPS_IP` | `yourdomain.com` → frontend |
 | A | `api` | `VPS_IP` | `api.yourdomain.com` → backend |
 
+> **DNS trỏ xong không có nghĩa là VPS đã "nhận" được request** — bản ghi A chỉ giúp trình
+> duyệt biết cần gửi request tới IP nào, giống như biết địa chỉ nhà nhưng chưa chắc có ai ra
+> mở cửa. Phía VPS còn cần 2 việc nữa mới thực sự trả lời được: mở cổng 80/443 ở firewall
+> ([Phase 3](#3-ssh-vào-vps-lần-đầu--bảo-mật-cơ-bản)), và có Nginx lắng nghe + biết ánh xạ
+> đúng domain vào đúng app ([Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot)). Thiếu 1 trong 2,
+> trình duyệt sẽ báo timeout hoặc connection refused dù `nslookup` đã ra đúng IP.
+
 Giao diện mỗi nhà cung cấp domain khác nhau nhưng đều có mục **DNS / DNS Records / Zone
 Editor**. Trường "Host"/"Name" nhập `@` (nghĩa là chính domain gốc) hoặc `api` (thành
 subdomain), trường "Value"/"Points to"/"Content" nhập IP VPS. TTL để mặc định là được.
@@ -99,9 +112,9 @@ chưa kịp lan truyền, đợi thêm (kiểm tra thêm ở [whatsmydns.net](ht
 trong lúc chờ DNS, chỉ cần DNS trỏ đúng **trước** khi tới bước xin SSL ở Phase 7.
 
 > **Nếu domain đang dùng Cloudflare**: khi thêm bản ghi A, đám mây cạnh bản ghi phải để
-> **xám (DNS only)**, không để **cam (Proxied)** — nếu để cam, Nginx Proxy Manager sẽ không
-> xin được SSL vì Cloudflare đứng chặn ở giữa. Có thể bật cam lại sau khi đã có SSL nếu muốn
-> dùng CDN của Cloudflare (nằm ngoài phạm vi hướng dẫn này).
+> **xám (DNS only)**, không để **cam (Proxied)** — nếu để cam, Certbot sẽ không xin được SSL
+> vì Cloudflare đứng chặn ở giữa. Có thể bật cam lại sau khi đã có SSL nếu muốn dùng CDN của
+> Cloudflare (nằm ngoài phạm vi hướng dẫn này).
 
 ---
 
@@ -166,17 +179,15 @@ Bật firewall — **làm đúng thứ tự dưới đây, sai thứ tự sẽ t
 ufw allow OpenSSH
 ufw allow 80
 ufw allow 443
-ufw allow 81
 ufw enable
 ```
 
 - **`ufw allow OpenSSH`**: mở cổng 22 (SSH) — **bắt buộc phải chạy dòng này trước khi
   `enable`**, nếu quên, bật firewall xong bạn sẽ mất kết nối SSH vĩnh viễn và phải nhờ nhà
   cung cấp VPS mở "Console cứu hộ" để vào gỡ.
-- **`ufw allow 80` / `443`**: mở cổng web thường (HTTP) và web bảo mật (HTTPS) — nơi Nginx
-  Proxy Manager sẽ lắng nghe.
-- **`ufw allow 81`**: mở cổng giao diện quản trị của Nginx Proxy Manager (dùng ở Phase 5).
-  Ở cuối Phase 5 có bước khuyến nghị thu hẹp lại cổng này, không để mở public mãi mãi.
+- **`ufw allow 80` / `443`**: mở cổng web thường (HTTP) và web bảo mật (HTTPS) — nơi Nginx sẽ
+  lắng nghe. Cổng MySQL (3306) và cổng nội bộ của Node (3000/3002) **không** mở ra ngoài —
+  chỉ Nginx trên chính VPS gọi vào, nên không cần thiết và mở ra chỉ tăng rủi ro.
 - **`ufw enable`**: kỳ vọng hỏi
   `Command may disrupt existing ssh connections. Proceed with operation (y|n)?` → gõ `y`.
 
@@ -186,7 +197,7 @@ Kiểm tra lại:
 ufw status
 ```
 
-Kỳ vọng thấy `Status: active` và danh sách `22`, `80`, `443`, `81` đều `ALLOW`.
+Kỳ vọng thấy `Status: active` và danh sách `22`, `80`, `443` đều `ALLOW`.
 
 Đăng xuất khỏi root, SSH lại bằng user `deploy` — từ đây về sau **dùng user `deploy` cho mọi
 lệnh còn lại** trong hướng dẫn này:
@@ -201,165 +212,112 @@ ssh deploy@VPS_IP
 
 ---
 
-## 4. Cài Docker
+## 4. Cài Node.js, MySQL, Nginx, PM2, Certbot
 
-Vẫn đang là user `deploy`:
+Vẫn đang là user `deploy`.
 
-```bash
-curl -fsSL https://get.docker.com | sudo sh
-```
-
-- **Lệnh này làm gì**: `curl` tải script cài đặt Docker chính thức từ `get.docker.com`, rồi
-  `| sudo sh` chạy ngay script đó với quyền root. Script tự nhận diện đây là Ubuntu và cài
-  Docker Engine + Docker Compose plugin đúng cách.
-- **Kỳ vọng**: chạy khoảng 1–2 phút, nhiều dòng log cài đặt, kết thúc bằng vài dòng hướng dẫn
-  của Docker (có thể bỏ qua). Không thấy dòng nào chứa `ERROR`.
-- **Nếu lỗi**:
-  - `curl: command not found` — VPS thiếu curl, chạy `sudo apt install -y curl` rồi thử lại.
-  - `Could not resolve host` — VPS chưa có kết nối internet ra ngoài hoặc DNS của chính VPS
-    có vấn đề, hiếm gặp, thử `ping -c3 8.8.8.8` để kiểm tra kết nối mạng của VPS trước.
+### Node.js 20
 
 ```bash
-sudo usermod -aG docker $USER
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 ```
 
-- **Lệnh này làm gì**: thêm user hiện tại (`deploy`) vào group `docker`, để chạy `docker ...`
-  không cần gõ `sudo` trước mỗi lần.
-- **Quan trọng**: thay đổi group chỉ có hiệu lực ở phiên đăng nhập **mới**. Thoát và SSH lại:
+- **Lệnh này làm gì**: thêm repository chính thức của NodeSource cho Node.js 20 vào `apt`,
+  rồi cài Node (kèm `npm`) từ repository đó — bản Node trong kho `apt` mặc định của Ubuntu
+  thường cũ hơn nhiều so với bản project cần.
+- **Kiểm tra**:
+  ```bash
+  node -v
+  npm -v
+  ```
+  Kỳ vọng `node -v` in ra `v20.x.x`.
+
+### MySQL Server
 
 ```bash
-exit
+sudo apt install -y mysql-server
 ```
+
+- **Kỳ vọng**: cài xong, MySQL tự khởi động như 1 service của hệ điều hành (`systemd`), lắng
+  nghe ở `127.0.0.1:3306` (chỉ máy VPS tự gọi được, không lộ ra internet — mặc định của
+  MySQL trên Ubuntu, an toàn sẵn không cần chỉnh).
+
+Chạy script bảo mật đi kèm:
 
 ```bash
-ssh deploy@VPS_IP
+sudo mysql_secure_installation
 ```
 
-Kiểm tra Docker hoạt động:
+Lần lượt trả lời (đây là script hỏi-đáp tương tác):
+
+1. `VALIDATE PASSWORD COMPONENT` → gõ `y` nếu muốn ép mật khẩu mạnh cho các user tạo sau
+   này, hoặc `n` nếu tự tin tự đặt mật khẩu đủ mạnh (khuyến nghị `y`).
+2. Nếu chọn `y` ở trên: chọn độ mạnh (0 = LOW, 1 = MEDIUM, 2 = STRONG) → gõ `1` là hợp lý.
+3. `Set root password?` → gõ `y`, đặt mật khẩu cho user `root` của MySQL (**khác** mật khẩu
+   SSH), gõ 2 lần.
+4. `Remove anonymous users?` → `y`.
+5. `Disallow root login remotely?` → `y` (root MySQL chỉ nên login từ chính VPS).
+6. `Remove test database and access to it?` → `y`.
+7. `Reload privilege tables now?` → `y`.
+
+### Nginx
 
 ```bash
-docker run hello-world
+sudo apt install -y nginx
 ```
 
-- **Kỳ vọng**: tải một image nhỏ về và in ra đoạn text bắt đầu bằng
-  `Hello from Docker!` — nghĩa là cài thành công.
-- **Nếu lỗi**: `permission denied while trying to connect to the Docker daemon socket` —
-  chưa thoát/đăng nhập lại sau lệnh `usermod` ở trên (group chưa được nạp). Chạy tạm
-  `newgrp docker` để có hiệu lực ngay không cần logout, hoặc đăng xuất/đăng nhập lại.
+- **Kỳ vọng**: Nginx tự khởi động như 1 service, lắng nghe cổng 80. Kiểm tra:
+  ```bash
+  sudo systemctl status nginx
+  ```
+  Kỳ vọng thấy dòng `Active: active (running)` màu xanh (`q` để thoát màn hình status).
+
+### PM2
 
 ```bash
-docker compose version
+sudo npm install -g pm2
 ```
 
-Kỳ vọng in ra số phiên bản (ví dụ `Docker Compose version v2.x.x`) — xác nhận Compose plugin
-đã có sẵn, không cần cài riêng.
+- **Kiểm tra**: `pm2 -v` in ra số phiên bản.
+
+### Certbot (xin SSL miễn phí)
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+```
+
+- `python3-certbot-nginx` là plugin giúp Certbot tự sửa file cấu hình Nginx để bật HTTPS,
+  dùng ở [Phase 7](#7-cấu-hình-nginx--ssl-bằng-certbot).
 
 ---
 
-## 5. Nginx Proxy Manager (reverse proxy dùng chung)
+## 5. Tạo database MySQL
 
-Chỉ dựng **một lần duy nhất** cho cả VPS — đứng trước mọi project sau này, không riêng Comic
-Store.
-
-```bash
-docker network create proxy
-```
-
-- **Lệnh này làm gì**: tạo một mạng ảo Docker tên `proxy`. Bất kỳ container nào (dù thuộc
-  compose file khác nhau, thư mục khác nhau) join vào mạng này đều gọi được nhau qua **tên
-  container** thay vì phải biết IP nội bộ — đây là cách Nginx Proxy Manager "thấy" được
-  frontend/backend của Comic Store.
-- **Nếu lỗi** `network with name proxy already exists` — không sao, nghĩa là đã tạo trước
-  đó rồi (ví dụ chạy lại hướng dẫn), bỏ qua và làm tiếp.
-
-Tạo thư mục hạ tầng dùng chung, tách biệt khỏi mọi project:
+Đăng nhập MySQL bằng user `root` vừa đặt mật khẩu ở Phase 4:
 
 ```bash
-mkdir -p ~/infra/nginx-proxy-manager
-cd ~/infra/nginx-proxy-manager
+sudo mysql -u root -p
 ```
 
-Tạo file `docker-compose.yml` bằng lệnh sau (dán nguyên khối, kể cả dòng `cat` và `EOF`):
+Trong dấu nhắc `mysql>` hiện ra, chạy lần lượt (thay `STRONG_PASSWORD` bằng mật khẩu mạnh
+riêng cho user này, **khác** mật khẩu root MySQL):
 
-```bash
-cat > docker-compose.yml <<'EOF'
-services:
-  npm:
-    image: jc21/nginx-proxy-manager:latest
-    container_name: nginx_proxy_manager
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "81:81"
-    volumes:
-      - ./data:/data
-      - ./letsencrypt:/etc/letsencrypt
-    networks:
-      - proxy
-
-networks:
-  proxy:
-    external: true
-EOF
+```sql
+CREATE DATABASE comic_store CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER 'comic_user'@'localhost' IDENTIFIED BY 'STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON comic_store.* TO 'comic_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 
-- **Lệnh này làm gì**: `cat > file <<'EOF' ... EOF` là cách ghi nội dung nhiều dòng vào 1
-  file trực tiếp từ terminal, không cần mở trình soạn thảo. Mọi thứ giữa 2 dòng `EOF` được
-  ghi y nguyên vào `docker-compose.yml`.
-- **`ports: "80:80"` v.v.**: mở cổng 80/443/81 của chính VPS, chuyển thẳng vào container NPM
-  — đây là container **duy nhất** trong toàn bộ hướng dẫn này mở cổng ra ngoài host, vì nó
-  đóng vai trò lễ tân nhận request từ internet.
-- **`networks: proxy: external: true`**: bảo Compose "dùng mạng `proxy` đã có sẵn", không tự
-  tạo mạng mới.
+- **`'comic_user'@'localhost'`**: user này chỉ được login từ `localhost` (chính VPS) — đúng
+  ý vì backend cũng chạy ngay trên VPS, gọi MySQL qua `localhost:3306`, không cần user gọi
+  được từ xa.
+- **Charset/collation**: khớp với quy ước trong `docker/mysql/init/schema.sql` (xem comment
+  đầu file đó) — giữ nguyên để tiếng Việt so khớp/sắp xếp đúng.
 
-Khởi động:
-
-```bash
-docker compose up -d
-```
-
-- **Lệnh này làm gì**: tải image `jc21/nginx-proxy-manager` (lần đầu mất khoảng 1 phút) rồi
-  khởi động container ở chế độ nền (`-d` = detached, không chiếm terminal).
-- **Kỳ vọng**: dòng cuối có dạng `✔ Container nginx_proxy_manager  Started`.
-- **Nếu lỗi** `Bind for 0.0.0.0:80 failed: port is already allocated` — VPS đã có sẵn
-  Apache/Nginx chiếm cổng 80 (một số nhà cung cấp cài sẵn). Kiểm tra và tắt nó:
-  ```bash
-  sudo systemctl stop nginx apache2 2>/dev/null
-  sudo systemctl disable nginx apache2 2>/dev/null
-  ```
-  rồi chạy lại `docker compose up -d`.
-
-Truy cập `http://VPS_IP:81` bằng trình duyệt trên máy bạn.
-
-- **Nếu không vào được trang**: kiểm tra lại `ufw status` trên VPS đã `ALLOW` cổng 81 chưa
-  (Phase 3); kiểm tra thêm firewall riêng của nhà cung cấp VPS ở control panel (một số VPS
-  như Vultr/AWS/GCP có "Security Group" tách biệt với `ufw`, phải mở cổng 81/80/443 ở đó
-  nữa).
-
-Đăng nhập bằng tài khoản mặc định:
-
-```
-Email:    admin@example.com
-Password: changeme
-```
-
-**Đổi email + mật khẩu ngay** ở màn hình hiện ra sau khi đăng nhập lần đầu — đây là thông
-tin đăng nhập public ai cũng biết nếu tìm trên mạng.
-
-> **Khuyến nghị bảo mật** (làm sau khi đã xong toàn bộ hướng dẫn, không bắt buộc ngay): thu
-> hẹp cổng 81 chỉ cho IP của bạn thay vì mở cho cả internet.
-> ```bash
-> # chạy lệnh dưới TRÊN MÁY BẠN (không phải VPS) để xem IP public hiện tại
-> curl ifconfig.me
-> ```
-> ```bash
-> # chạy TRÊN VPS, thay YOUR_IP bằng kết quả trên
-> sudo ufw allow from YOUR_IP to any port 81 proto tcp
-> sudo ufw delete allow 81
-> ```
-> Nếu IP nhà/mạng bạn hay đổi (mạng 4G, một số ISP Việt Nam cấp IP động), làm bước này sẽ
-> tự khoá bạn ra khỏi trang quản trị — có thể bỏ qua bước này nếu không chắc IP mình cố định.
+Ghi nhớ lại `STRONG_PASSWORD` — cần dùng ở bước tạo `backend/.env` tại Phase 6.
 
 ---
 
@@ -407,144 +365,216 @@ cd comic-store
 Có 2 file `.env` cần tạo trên VPS — **không commit vào git**, đã có sẵn trong `.gitignore`:
 
 ```bash
-cp .env.production.example .env
-nano .env
+cp backend/.env.example backend/.env
+nano backend/.env
 ```
 
 Điền giá trị thật (xem lại [Cách dùng nano](#cách-dùng-nano-trình-soạn-thảo-trong-terminal)
 ở trên nếu quên thao tác):
 
 ```dotenv
-MYSQL_ROOT_PASSWORD=<đặt mật khẩu mạnh, không dấu cách, không ký tự $ ` " \>
-MYSQL_DATABASE=comic_store
-MYSQL_USER=comic_user
-MYSQL_PASSWORD=<đặt mật khẩu mạnh khác, cùng lưu ý ký tự>
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com/api
-```
-
-> Tránh các ký tự `$ " ' \` trong mật khẩu — chúng có ý nghĩa đặc biệt trong file `.env` và
-> câu lệnh shell, dễ gây lỗi khó hiểu. Chữ + số + vài ký tự `_ - . @` là an toàn nhất.
-
-```bash
-cp backend/.env.example backend/.env
-nano backend/.env
-```
-
-```dotenv
 PORT=3002
-DATABASE_URL="mysql://comic_user:<đúng mật khẩu MYSQL_PASSWORD ở trên>@mysql:3306/comic_store"
+DATABASE_URL="mysql://comic_user:STRONG_PASSWORD@localhost:3306/comic_store"
 FRONTEND_URL="https://yourdomain.com"
 NODE_ENV=production
 ```
 
-- **`mysql:3306` chứ không phải `localhost:3306`**: `mysql` ở đây là **tên service** trong
-  `docker-compose.prod.yml`, không phải địa chỉ máy chủ thật. Bên trong mạng Docker nội bộ,
-  các container gọi nhau bằng tên service giống như tên miền riêng.
+- **`localhost:3306` chứ không phải tên container**: vì MySQL cài trực tiếp trên VPS (Phase
+  4–5), backend gọi thẳng qua `localhost` — không còn khái niệm "tên service" như lúc dùng
+  Docker network.
+- **`STRONG_PASSWORD`**: đúng mật khẩu đã đặt cho `comic_user` ở Phase 5.
 - **`NODE_ENV=production`**: bắt buộc — thiếu biến này, cookie đăng nhập sẽ không bật cờ
   `secure`, kém an toàn hơn khi chạy qua domain thật (xem
   `backend/src/auth/auth.controller.ts:40`).
 - **`FRONTEND_URL` phải khớp chính xác** origin trình duyệt sẽ dùng, kể cả `https://`, không
   có dấu `/` ở cuối — sai chỗ này là nguyên nhân phổ biến nhất của lỗi CORS ở Phase 8.
 
-### Build và chạy
-
 ```bash
-docker compose -f docker-compose.prod.yml build
+cp frontend/.env.example frontend/.env.production.local
+nano frontend/.env.production.local
 ```
 
-- **Lệnh này làm gì**: đọc `backend/Dockerfile` và `frontend/Dockerfile`, build thành 2
-  Docker image (đóng gói toàn bộ code + Node + dependencies). Lần đầu tải base image
-  (`node:20-slim`, `node:20-alpine`) và cài `npm ci` từ đầu nên có thể mất **5–10 phút**.
-- **Kỳ vọng**: kết thúc bằng vài dòng `=> => naming to docker.io/library/comic-store-backend`
-  và `...-frontend`, không có dòng nào bắt đầu bằng `ERROR` hay `failed to solve`.
-- **Nếu lỗi**:
-  - `npm ci` báo lỗi liên quan `package-lock.json` (ví dụ `npm ci can only install packages
-    when your package.json and package-lock.json are in sync`) — lockfile trên VPS (từ git)
-    không khớp code. Trên máy dev, chạy `npm install` trong thư mục lỗi (`backend` hoặc
-    `frontend`), commit `package-lock.json` mới, push, rồi `git pull` lại trên VPS và build
-    lại.
-  - Lỗi biên dịch TypeScript (`error TS...`) — code đang lỗi build thật sự, không liên quan
-    Docker. Chạy `npm run build` trong thư mục `backend`/`frontend` trên máy dev để tái hiện
-    và sửa lỗi trước, rồi push lại.
-  - `no space left on device` — VPS hết dung lượng đĩa (thường gặp ở VPS cấu hình thấp).
-    Kiểm tra `df -h`, nếu `/` gần đầy, dọn image/cache Docker cũ không dùng:
-    ```bash
-    docker system prune -a
-    ```
-    (lệnh này hỏi xác nhận `y/N`, xoá mọi image/container/cache không đang chạy — an toàn
-    với setup hiện tại vì chỉ có các container của bạn).
-  - `no configuration file provided: not found` — đang không đứng trong thư mục
-    `~/comic-store` (thư mục chứa `docker-compose.prod.yml`). Chạy `cd ~/comic-store` rồi
-    thử lại.
-
-```bash
-docker compose -f docker-compose.prod.yml up -d
+```dotenv
+NEXT_PUBLIC_API_URL="https://api.yourdomain.com/api"
 ```
 
-- **Lệnh này làm gì**: tạo và khởi động 3 container (`mysql`, `backend`, `frontend`) ở chế
-  độ nền, theo đúng thứ tự phụ thuộc (`backend` đợi `mysql` khoẻ mạnh mới chạy, nhờ
-  `depends_on: condition: service_healthy` trong compose file).
+- **`.env.production.local`**: Next.js tự động đọc file này khi chạy `npm run build` (build
+  ở chế độ production) — không cần cấu hình gì thêm để nó được nhận.
+- **`NEXT_PUBLIC_*` được nhúng thẳng vào file JS lúc `build`**, không đọc lại lúc chạy `next
+  start`. Đổi giá trị trong file này **không đủ** để áp dụng cho app đang chạy — bắt buộc
+  phải build lại (xem lại ở [Phase 9](#9-deploy-các-lần-sau-cập-nhật-code)).
+
+### Cài dependencies và build
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
+npm install
 ```
 
-- **Kỳ vọng**: cột `STATUS` của `comic_store_mysql` hiện `Up ... (healthy)`, của
-  `comic_store_backend` và `comic_store_frontend` hiện `Up ...`.
-- **Nếu lỗi**:
-  - Một container hiện `Restarting (1) ...` liên tục — container bị crash ngay sau khi
-    khởi động, xem log để biết lý do cụ thể (bước ngay dưới đây).
-  - `comic_store_mysql` mãi không chuyển sang `(healthy)` — MySQL khởi tạo lần đầu (nạp
-    `docker/mysql/init/schema.sql`) có thể mất khoảng 30–60 giây, đợi thêm rồi `ps` lại. Nếu
-    sau vài phút vẫn không healthy, xem log mysql.
-
-Xem log để chẩn đoán khi có lỗi (`Ctrl+C` để thoát xem log, container vẫn chạy bình thường):
+- **Lệnh này làm gì**: cài dependencies cho cả `frontend` và `backend` cùng lúc thông qua npm
+  workspaces (đọc `workspaces` trong `package.json` ở root), đồng thời tự chạy
+  `prisma generate` (hook `postinstall` của `backend/package.json`).
+- **Kỳ vọng**: kết thúc không có dòng nào bắt đầu bằng `npm error`. Lần đầu có thể mất vài
+  phút do tải toàn bộ package.
+- **Nếu lỗi** liên quan `package-lock.json` (ví dụ `npm ci can only install packages when...`)
+  — lockfile trên VPS (từ git) không khớp code. Trên máy dev, chạy `npm install`, commit
+  `package-lock.json` mới, push, rồi `git pull` lại trên VPS và cài lại.
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f backend
-docker compose -f docker-compose.prod.yml logs -f mysql
+npm run build --prefix backend
+npm run build --prefix frontend
 ```
 
-Vài lỗi log thường gặp và cách xử lý:
+- **`--prefix backend`**: chạy script `build` định nghĩa trong `backend/package.json`
+  (`nest build`) nhưng vẫn đứng ở thư mục root — tương đương `cd backend && npm run build`.
+- **Kỳ vọng**: `backend` sinh ra thư mục `backend/dist/` (chứa `main.js`), `frontend` sinh ra
+  thư mục `frontend/.next/`. Không có dòng nào bắt đầu bằng `error TS` (backend) hay build
+  fail (frontend).
+- **Nếu lỗi biên dịch TypeScript** (`error TS...`) — code đang lỗi build thật sự, không liên
+  quan VPS. Chạy lại đúng lệnh này trên máy dev để tái hiện và sửa lỗi trước, rồi push lại.
 
-| Log thấy được | Nguyên nhân | Cách xử lý |
-| --- | --- | --- |
-| `Error: connect ECONNREFUSED mysql:3306` (backend) | `DATABASE_URL` sai, hoặc mysql chưa kịp sẵn sàng | So khớp `MYSQL_PASSWORD` trong `.env` (root) với mật khẩu trong `backend/.env`; đợi thêm nếu mysql chưa healthy |
-| `Access denied for user 'comic_user'@'%'` (backend/mysql) | Sai user/password MySQL | Kiểm tra lại `MYSQL_USER`/`MYSQL_PASSWORD` trong `.env` khớp với `DATABASE_URL` trong `backend/.env` |
-| `Error: listen EADDRINUSE` (backend) | Hiếm gặp với setup này vì không map port ra host | Kiểm tra không có compose file khác đang chạy cùng lúc |
+### Import schema database
+
+```bash
+mysql -u comic_user -p comic_store < docker/mysql/init/schema.sql
+```
+
+- **Lệnh này làm gì**: chạy toàn bộ file `schema.sql` (nguồn sự thật cho cấu trúc bảng, xem
+  comment đầu file đó) để tạo bảng trong database `comic_store` vừa tạo ở Phase 5. File này
+  dùng chung với máy dev local, không có gì đổi khi chuyển sang chạy trên VPS.
+- **Kỳ vọng**: chạy xong quay lại dấu nhắc lệnh, không có dòng `ERROR`.
+- Nhập mật khẩu của `comic_user` (đặt ở Phase 5) khi được hỏi (`Enter password:`).
+
+### Chạy bằng PM2
+
+```bash
+pm2 start ecosystem.config.js
+```
+
+- **Lệnh này làm gì**: đọc `ecosystem.config.js` ở root repo, khởi động 2 process nền:
+  `comic-backend` (`node backend/dist/main.js`) và `comic-frontend` (`npm start` trong thư
+  mục `frontend`, tức `next start`, mặc định lắng nghe cổng 3000).
+- **Kỳ vọng**:
+  ```bash
+  pm2 status
+  ```
+  hiện bảng với 2 dòng `comic-backend` và `comic-frontend`, cột `status` đều `online`.
+- **Nếu 1 process hiện `errored` hoặc liên tục restart** — xem log để biết lý do cụ thể:
+  ```bash
+  pm2 logs comic-backend --lines 50
+  pm2 logs comic-frontend --lines 50
+  ```
+
+Cho PM2 tự khởi động lại 2 app này khi VPS reboot:
+
+```bash
+pm2 save
+pm2 startup systemd -u deploy --hp /home/deploy
+```
+
+- **`pm2 save`**: lưu danh sách process đang chạy (`comic-backend`, `comic-frontend`) vào
+  file để khôi phục sau này.
+- **`pm2 startup ...`**: in ra **một dòng lệnh `sudo env PATH=... pm2 startup systemd -u
+  deploy --hp /home/deploy`** — copy nguyên dòng đó và chạy tiếp (đây là bước bắt buộc,
+  lệnh gốc chỉ tạo ra lệnh cần chạy chứ chưa tự chạy). Sau đó chạy lại `pm2 save` một lần
+  nữa để chắc chắn danh sách được lưu vào service vừa đăng ký.
+- **Kỳ vọng kiểm tra**: `sudo systemctl status pm2-deploy` hiện `active (running)`.
 
 ---
 
-## 7. Tạo Proxy Host + SSL trong Nginx Proxy Manager
+## 7. Cấu hình Nginx + SSL bằng Certbot
 
-Vào `http://VPS_IP:81` (hoặc domain nếu đã hardening) → menu **Hosts → Proxy Hosts** → nút
-**Add Proxy Host** góc trên phải.
+Tạo file cấu hình cho frontend:
 
-**Host cho frontend:**
-1. Tab **Details** → ô **Domain Names**: gõ `yourdomain.com`, nhấn Enter/Tab để nó thành
-   "chip" (thẻ bo tròn).
-2. **Scheme**: `http` (nội bộ giữa NPM và container đi qua mạng Docker, không cần https ở
-   chặng này — HTTPS chỉ cần ở chặng trình duyệt ↔ NPM).
-3. **Forward Hostname / IP**: `frontend` (đúng tên container trong `docker-compose.prod.yml`
-   — NPM tìm ra được vì cùng nằm trên mạng `proxy`).
-4. **Forward Port**: `3000`.
-5. Bật **Block Common Exploits**. Không cần bật Websockets Support (không dùng ở project
-   này hiện tại).
-6. Tab **SSL** → dropdown **SSL Certificate** → **Request a new SSL Certificate** → tick
-   **Force SSL**, **HTTP/2 Support**, tick **I Agree to the Let's Encrypt Terms of Service**
-   → nhập email của bạn → **Save**.
+```bash
+sudo nano /etc/nginx/sites-available/yourdomain.com
+```
 
-**Host cho backend:** lặp lại y hệt, đổi:
-- Domain Names: `api.yourdomain.com`
-- Forward Hostname/IP: `backend`
-- Forward Port: `3002`
+Dán nội dung sau (thay `yourdomain.com` bằng domain thật):
 
-- **Kỳ vọng**: sau khi Save, NPM tự gọi Let's Encrypt xác thực domain rồi cấp chứng chỉ —
-  mất vài giây đến khoảng 1 phút. Xong sẽ thấy icon ổ khoá xanh cạnh domain trong danh sách
-  Proxy Hosts.
-- **Nếu lỗi khi xin SSL** (`Error creating SSL Certificate` hoặc tương tự):
-  - **DNS chưa lan truyền** — quay lại `nslookup yourdomain.com` kiểm tra, đợi thêm rồi thử
-    lại (nút **...** cạnh host → **Renew Certificate**).
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Tạo file cấu hình cho backend (domain `api.`):
+
+```bash
+sudo nano /etc/nginx/sites-available/api.yourdomain.com
+```
+
+```nginx
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+- **`proxy_pass http://127.0.0.1:3000`/`3002`**: đúng cổng nội bộ mà PM2 đang chạy
+  `comic-frontend`/`comic-backend` — khớp với `PORT=3002` trong `backend/.env` và cổng mặc
+  định 3000 của `next start`.
+
+Kích hoạt 2 site vừa tạo (tạo symlink từ `sites-available` sang `sites-enabled`):
+
+```bash
+sudo ln -s /etc/nginx/sites-available/yourdomain.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/api.yourdomain.com /etc/nginx/sites-enabled/
+```
+
+Kiểm tra cú pháp rồi áp dụng:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+- **`nginx -t`**: kỳ vọng thấy `syntax is ok` và `test is successful`. Nếu báo lỗi — đọc
+  thông báo, thường là gõ thiếu dấu `;` hoặc `{` `}` không khớp trong file vừa tạo.
+
+Mở `http://yourdomain.com` và `http://api.yourdomain.com/api/health` bằng trình duyệt — kỳ
+vọng đã thấy nội dung trả về qua HTTP (chưa có ổ khoá HTTPS, bước tiếp theo mới bật).
+
+- **Nếu ra `502 Bad Gateway`** — PM2 process tương ứng chưa chạy hoặc crash, kiểm tra lại
+  `pm2 status` và `pm2 logs`.
+- **Nếu không vào được trang** — DNS chưa trỏ đúng ([Phase 2](#2-trỏ-dns-về-vps)), hoặc
+  firewall của nhà cung cấp VPS (Security Group) chưa mở 80/443 ngoài `ufw`.
+
+### Xin SSL
+
+```bash
+sudo certbot --nginx -d yourdomain.com -d api.yourdomain.com
+```
+
+- **Lệnh này làm gì**: Certbot xác thực quyền sở hữu domain qua cổng 80, xin 1 chứng chỉ SSL
+  dùng chung cho cả 2 domain, rồi **tự động sửa** 2 file cấu hình Nginx vừa tạo để thêm
+  `listen 443 ssl`, đường dẫn chứng chỉ, và redirect HTTP → HTTPS.
+- **Lần đầu chạy sẽ hỏi**:
+  - Email — dùng để Let's Encrypt gửi cảnh báo trước khi chứng chỉ hết hạn.
+  - Đồng ý Terms of Service → gõ `Y`.
+  - Có muốn share email cho EFF không → tuỳ chọn, `Y` hoặc `N` đều được.
+- **Kỳ vọng**: kết thúc bằng thông báo `Successfully deployed certificate` cho cả 2 domain.
+- **Nếu lỗi khi xin SSL**:
+  - **DNS chưa lan truyền** — quay lại `nslookup yourdomain.com` kiểm tra, đợi thêm rồi chạy
+    lại đúng lệnh trên (Certbot tự nhận ra chứng chỉ nào đã có, chỉ xin thêm cái thiếu).
   - **Cổng 80 bị chặn** — Let's Encrypt xác thực qua HTTP (cổng 80) tới đúng IP domain trỏ
     tới. Kiểm tra `ufw status` đã allow 80, và firewall riêng của nhà cung cấp VPS (Security
     Group) cũng đã mở 80/443.
@@ -552,9 +582,13 @@ Vào `http://VPS_IP:81` (hoặc domain nếu đã hardening) → menu **Hosts �
     ở Phase 2, thử lại, có thể bật cam lại sau khi có SSL.
   - **Đã xin cert cho domain này ở nơi khác trước đó, bị giới hạn rate limit của Let's
     Encrypt** (5 lần/tuần cho cùng domain) — đợi hoặc dùng domain/subdomain khác thử trước.
-- **Nếu vào domain ra "502 Bad Gateway"** sau khi đã có SSL: forward hostname/port gõ sai
-  chính tả, hoặc container tương ứng chưa chạy — kiểm tra
-  `docker compose -f docker-compose.prod.yml ps` ở VPS.
+
+Chứng chỉ Let's Encrypt hết hạn sau 90 ngày nhưng Certbot tự cài sẵn 1 cron/systemd timer gia
+hạn tự động — không cần làm gì thêm. Kiểm tra timer đang bật:
+
+```bash
+sudo systemctl status certbot.timer
+```
 
 ---
 
@@ -579,10 +613,10 @@ Nếu hiện lỗi kết nối, mở DevTools (F12) → tab **Console**/**Networ
 
 - Lỗi liên quan **CORS** (`has been blocked by CORS policy`) → `FRONTEND_URL` trong
   `backend/.env` không khớp chính xác origin đang mở — sửa lại rồi
-  `docker compose -f docker-compose.prod.yml up -d backend` (không cần build lại, chỉ
-  restart vì đây là biến đọc lúc chạy, không phải lúc build).
-- Lỗi `Failed to fetch` / `ERR_CONNECTION_REFUSED` tới domain api → Proxy Host cho backend
-  chưa đúng, hoặc backend container chưa chạy — xem lại Phase 6–7.
+  `pm2 restart comic-backend` (không cần build lại, chỉ restart vì đây là biến đọc lúc chạy,
+  không phải lúc build).
+- Lỗi `Failed to fetch` / `ERR_CONNECTION_REFUSED` tới domain api → cấu hình Nginx cho backend
+  chưa đúng, hoặc `comic-backend` chưa chạy — xem lại Phase 6–7.
 
 Thử **đăng ký** rồi **đăng nhập** trên trang — sau đăng nhập, mở F12 → tab **Application**
 (Chrome/Edge) hoặc **Storage** (Firefox) → **Cookies** → chọn domain `yourdomain.com` → tìm
@@ -599,37 +633,38 @@ thêm cho việc này.
 ```bash
 cd ~/comic-store
 git pull
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
+npm install
+npm run build --prefix backend
+npm run build --prefix frontend
+pm2 restart ecosystem.config.js
 ```
 
-Chỉ backend hoặc chỉ frontend thay đổi thì build/up riêng service đó cho nhanh hơn:
+- **`npm install`**: chỉ cần khi `package-lock.json` có thay đổi (thêm/bớt dependency), nhưng
+  chạy lại luôn cũng vô hại, chỉ tốn thêm vài giây nếu không có gì thay đổi.
+- **`pm2 restart ecosystem.config.js`**: khởi động lại cả 2 process với code/build mới nhất,
+  không mất cấu hình đã lưu (`pm2 save` ở Phase 6).
+
+Chỉ backend hoặc chỉ frontend thay đổi thì build/restart riêng service đó cho nhanh hơn:
 
 ```bash
-docker compose -f docker-compose.prod.yml build backend
-docker compose -f docker-compose.prod.yml up -d backend
+npm run build --prefix backend
+pm2 restart comic-backend
 ```
 
 > **Lưu ý riêng cho `NEXT_PUBLIC_API_URL`**: biến này được nhúng thẳng vào file JS lúc
-> `build`, không đọc lại lúc container chạy. Đổi giá trị trong `.env` rồi `up -d` **không đủ**
-> — bắt buộc phải build lại image `frontend`:
+> `npm run build --prefix frontend`, không đọc lại lúc `pm2 restart`. Đổi giá trị trong
+> `frontend/.env.production.local` rồi chỉ `pm2 restart` **không đủ** — bắt buộc phải build
+> lại:
 > ```bash
-> docker compose -f docker-compose.prod.yml build frontend
-> docker compose -f docker-compose.prod.yml up -d frontend
+> npm run build --prefix frontend
+> pm2 restart comic-frontend
 > ```
 
-Kiểm tra container chạy đúng sau update, giống Phase 6:
+Kiểm tra chạy đúng sau update, giống Phase 6:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f backend
-```
-
-Dọn image cũ không dùng nữa định kỳ (mỗi image build mới không tự xoá image cũ, lâu ngày đầy
-đĩa):
-
-```bash
-docker image prune -f
+pm2 status
+pm2 logs comic-backend --lines 50
 ```
 
 ---
@@ -639,24 +674,19 @@ docker image prune -f
 ### Backup thủ công
 
 ```bash
-cd ~/comic-store
-docker compose -f docker-compose.prod.yml exec mysql \
-  sh -c 'exec mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" comic_store' \
-  > backup-$(date +%F).sql
+mkdir -p ~/backups
+mysqldump -u comic_user -p comic_store > ~/backups/backup-$(date +%F).sql
 ```
 
-- **Lệnh này làm gì**: `exec` chạy lệnh `mysqldump` bên trong container `mysql` đang chạy,
-  xuất toàn bộ database `comic_store` ra dạng SQL text, rồi `>` ghi ra file trên VPS tên
-  `backup-2026-08-18.sql` (ngày hiện tại).
-- **Kỳ vọng**: file `.sql` tạo ra có dung lượng > 0 byte (`ls -lh backup-*.sql` để kiểm tra).
-  Nếu file dung lượng 0 hoặc lệnh báo lỗi `Access denied`, kiểm tra lại
-  `MYSQL_ROOT_PASSWORD` trong `.env` có đúng không.
+- **Lệnh này làm gì**: xuất toàn bộ database `comic_store` ra dạng SQL text, ghi ra file tên
+  `backup-2026-08-18.sql` (ngày hiện tại) trong `~/backups`.
+- **Kỳ vọng**: file `.sql` tạo ra có dung lượng > 0 byte (`ls -lh ~/backups/backup-*.sql` để
+  kiểm tra). Nếu lệnh báo lỗi `Access denied`, kiểm tra lại mật khẩu `comic_user`.
 
 ### Restore từ file backup
 
 ```bash
-cat backup-2026-08-18.sql | docker compose -f docker-compose.prod.yml exec -T mysql \
-  sh -c 'exec mysql -u root -p"$MYSQL_ROOT_PASSWORD" comic_store'
+mysql -u comic_user -p comic_store < ~/backups/backup-2026-08-18.sql
 ```
 
 > Lệnh này **ghi đè** dữ liệu hiện có trong database bằng nội dung file backup — chỉ chạy
@@ -664,8 +694,27 @@ cat backup-2026-08-18.sql | docker compose -f docker-compose.prod.yml exec -T my
 
 ### Tự động backup mỗi đêm bằng cron
 
+Vì backup tự động chạy không có người ngồi gõ mật khẩu, tạo file credentials riêng cho
+`mysqldump` đọc:
+
 ```bash
-mkdir -p ~/backups
+nano ~/.my.cnf
+```
+
+```ini
+[client]
+user=comic_user
+password=STRONG_PASSWORD
+```
+
+```bash
+chmod 600 ~/.my.cnf
+```
+
+- **`chmod 600`**: chỉ user `deploy` đọc/ghi được file này — bắt buộc vì file chứa mật khẩu
+  dạng plain text.
+
+```bash
 crontab -e
 ```
 
@@ -675,11 +724,12 @@ crontab -e
   thoát `Ctrl+X`:
 
 ```
-0 2 * * * cd /home/deploy/comic-store && docker compose -f docker-compose.prod.yml exec -T mysql sh -c 'exec mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" comic_store' > /home/deploy/backups/backup-$(date +\%F).sql 2>> /home/deploy/backups/backup.log
+0 2 * * * mysqldump comic_store > /home/deploy/backups/backup-$(date +\%F).sql 2>> /home/deploy/backups/backup.log
 ```
 
-> Trong crontab, dấu `%` phải viết thành `\%` (thoát ký tự) vì `%` có ý nghĩa đặc biệt trong
-> cron — nếu quên, lệnh sẽ không chạy đúng ngày tháng.
+- Không cần `-u`/`-p` nữa vì `mysqldump` tự đọc `~/.my.cnf`.
+- Trong crontab, dấu `%` phải viết thành `\%` (thoát ký tự) vì `%` có ý nghĩa đặc biệt trong
+  cron — nếu quên, lệnh sẽ không chạy đúng ngày tháng.
 
 Nên định kỳ (vài tuần/lần) dọn các file backup cũ trong `~/backups` để không đầy đĩa, hoặc
 thêm 1 dòng cron khác dùng `find ~/backups -mtime +30 -delete` để tự xoá backup quá 30 ngày.
@@ -688,35 +738,41 @@ thêm 1 dòng cron khác dùng `find ~/backups -mtime +30 -delete` để tự xo
 
 ## 11. Thêm project thứ 2 trên cùng VPS
 
-Nginx Proxy Manager và mạng `proxy` ở Phase 5 chỉ cần dựng **một lần** cho cả server. Project
-mới sau này chỉ cần:
+Nginx, MySQL, PM2, Certbot ở các Phase trên đều là service **dùng chung cho cả server**, chỉ
+cài **một lần**. Project mới sau này chỉ cần:
 
 1. `git clone` project vào thư mục riêng, ví dụ `~/project-2` (không nằm trong
    `~/comic-store`).
-2. File `docker-compose.yml` của project đó join vào mạng `proxy` (`external: true`), giống
-   cách Comic Store đang làm trong `docker-compose.prod.yml`.
-3. `docker compose up -d` trong thư mục project đó.
-4. Vào NPM (`http://VPS_IP:81`), thêm Proxy Host + SSL mới — trỏ tới tên container của
-   project mới, domain mới.
+2. Tạo thêm 1 database + user MySQL riêng cho project đó (lặp lại [Phase 5](#5-tạo-database-mysql),
+   đổi tên database/user) — **không cần cài MySQL lần 2**, một MySQL Server chạy chung nhiều
+   database là bình thường và tiết kiệm RAM hơn nhiều so với mỗi project một container MySQL
+   riêng.
+3. Thêm entry mới vào `ecosystem.config.js` của project đó (cổng nội bộ khác, ví dụ 4000/4002
+   để không đụng cổng của Comic Store), `pm2 start` + `pm2 save`.
+4. Thêm 2 file cấu hình Nginx mới trong `/etc/nginx/sites-available/` (domain mới, `proxy_pass`
+   trỏ tới cổng nội bộ mới), `ln -s` sang `sites-enabled`, `certbot --nginx -d ...` cho domain
+   mới.
 
-Không cần đụng vào NPM, mạng `proxy`, file `.env`, hay bất kỳ container nào của Comic Store.
+Không cần đụng vào cấu hình Nginx, PM2 app, hay database của Comic Store.
 
 ---
 
 ## 12. Bảng lệnh tra cứu nhanh
 
-Chạy trong thư mục `~/comic-store`, đã có sẵn `docker-compose.prod.yml`:
+Chạy trong thư mục `~/comic-store` trừ khi ghi chú khác.
 
 | Muốn làm gì | Lệnh |
 | --- | --- |
-| Xem trạng thái container | `docker compose -f docker-compose.prod.yml ps` |
-| Xem log 1 service, theo dõi live | `docker compose -f docker-compose.prod.yml logs -f backend` |
-| Khởi động lại 1 service | `docker compose -f docker-compose.prod.yml restart backend` |
-| Build lại sau khi đổi code | `docker compose -f docker-compose.prod.yml build` |
-| Áp dụng image mới build | `docker compose -f docker-compose.prod.yml up -d` |
-| Dừng toàn bộ (giữ data) | `docker compose -f docker-compose.prod.yml down` |
-| Dừng + **xoá luôn data MySQL** | `docker compose -f docker-compose.prod.yml down -v` ⚠️ |
-| Vào shell bên trong 1 container | `docker compose -f docker-compose.prod.yml exec backend sh` |
+| Xem trạng thái 2 process | `pm2 status` |
+| Xem log 1 service, theo dõi live | `pm2 logs comic-backend` |
+| Khởi động lại 1 service | `pm2 restart comic-backend` |
+| Khởi động lại cả 2 service | `pm2 restart ecosystem.config.js` |
+| Dừng 1 service (giữ lại trong danh sách PM2) | `pm2 stop comic-backend` |
+| Build lại sau khi đổi code | `npm run build --prefix backend` (hoặc `frontend`) |
+| Lưu danh sách process hiện tại cho PM2 startup | `pm2 save` |
+| Xem log Nginx | `sudo tail -f /var/log/nginx/error.log` |
+| Kiểm tra cú pháp + áp dụng cấu hình Nginx mới | `sudo nginx -t && sudo systemctl reload nginx` |
+| Backup database thủ công | `mysqldump -u comic_user -p comic_store > backup.sql` |
+| Đăng nhập MySQL | `mysql -u comic_user -p comic_store` |
 | Xem dung lượng đĩa còn lại | `df -h` |
-| Dọn image Docker cũ không dùng | `docker image prune -f` |
-
+| Xem RAM đang dùng | `free -h` |
