@@ -44,6 +44,14 @@ npm run db:down    # dừng MySQL
 npm run db:reset   # xoá volume và khởi động lại MySQL (mất toàn bộ data)
 ```
 
+## Dữ liệu mẫu (tùy chọn)
+
+```bash
+docker exec -i comic_store_mysql mysql -u comic_user -pcomic_password comic_store < docker/mysql/seed-sample-data.sql
+```
+
+Thêm categories/series/products/variants mẫu + 3 tài khoản test (xem chi tiết và hướng dẫn chạy trên server ở đầu file `docker/mysql/seed-sample-data.sql`).
+
 ## Khởi tạo Prisma Client
 
 ```bash

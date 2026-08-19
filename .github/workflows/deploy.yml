@@ -1,0 +1,41 @@
+name: Deploy to VPS
+
+# Chạy tự động mỗi khi push lên nhánh main, hoặc bấm chạy tay từ tab Actions trên GitHub.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Nếu push nhiều lần liên tiếp, huỷ lượt deploy cũ đang chờ, chỉ giữ lượt mới nhất.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH vào VPS và deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            cd ~/comic-store
+            git pull origin main
+            npm install
+            npm run build --prefix backend
+            npm run build --prefix frontend
+            pm2 restart ecosystem.config.js
+
+      - name: Kiểm tra sau deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: pm2 status

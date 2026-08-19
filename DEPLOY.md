@@ -28,6 +28,7 @@ dụng cho VPS Ubuntu 22.04/24.04.
 - [10. Backup / restore database](#10-backup--restore-database)
 - [11. Thêm project thứ 2 trên cùng VPS](#11-thêm-project-thứ-2-trên-cùng-vps)
 - [12. Bảng lệnh tra cứu nhanh](#12-bảng-lệnh-tra-cứu-nhanh)
+- [13. Tự động deploy bằng GitHub Actions](#13-tự-động-deploy-bằng-github-actions)
 
 ---
 
@@ -804,3 +805,74 @@ Chạy trong thư mục `~/comic-store` trừ khi ghi chú khác.
 | Đăng nhập MySQL | `mysql -u comic_user -p comic_store` |
 | Xem dung lượng đĩa còn lại | `df -h` |
 | Xem RAM đang dùng | `free -h` |
+
+---
+
+## 13. Tự động deploy bằng GitHub Actions
+
+Thay vì SSH vào VPS gõ lại 5 dòng lệnh ở [Phase 9](#9-deploy-các-lần-sau-cập-nhật-code) sau
+mỗi lần push, workflow ở `.github/workflows/deploy.yml` tự làm việc đó — mỗi khi push lên
+nhánh `main` (hoặc bấm chạy tay ở tab **Actions** trên GitHub), GitHub sẽ tự SSH vào VPS và
+chạy đúng các lệnh đó.
+
+**Cơ chế**: GitHub Actions cần một cặp SSH key riêng (khác với deploy key ở
+[Phase 6](#6-deploy-comic-store-lần-đầu) dùng để `git clone` — đây là key để GitHub **đăng
+nhập vào VPS**, không phải để VPS clone code).
+
+### Bước 1 — Tạo SSH key riêng cho GitHub Actions (chạy trên VPS)
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_actions_deploy -N ""
+cat ~/.ssh/github_actions_deploy.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+- Tạo cặp khoá mới (`-N ""` = không passphrase, bắt buộc để chạy tự động không cần nhập tay).
+- Thêm khoá **public** vào danh sách khoá được phép đăng nhập root trên chính VPS này.
+
+In ra khoá **private** để copy sang GitHub (bước 2):
+
+```bash
+cat ~/.ssh/github_actions_deploy
+```
+
+Copy toàn bộ nội dung, kể cả 2 dòng `-----BEGIN OPENSSH PRIVATE KEY-----` và
+`-----END OPENSSH PRIVATE KEY-----`.
+
+### Bước 2 — Thêm Secrets trên GitHub
+
+Vào repo trên GitHub → **Settings** → **Secrets and variables** → **Actions** →
+**New repository secret**, tạo lần lượt 4 secret:
+
+| Tên secret | Giá trị |
+| --- | --- |
+| `VPS_HOST` | IP của VPS (giống IP dùng ở `ssh root@VPS_IP`) |
+| `VPS_USER` | `root` |
+| `VPS_SSH_KEY` | Toàn bộ nội dung private key vừa `cat` ở Bước 1 |
+| `VPS_PORT` | `22` (hoặc port SSH khác nếu bạn đã đổi) |
+
+> Secret khác biến môi trường thường ở chỗ: sau khi lưu, không ai (kể cả bạn) xem lại được
+> giá trị nữa, chỉ có thể ghi đè bằng giá trị mới — đây là thiết kế bảo mật chủ đích của
+> GitHub, không phải lỗi.
+
+### Bước 3 — Push code và kiểm tra
+
+Push lên `main` như bình thường, rồi vào tab **Actions** trên GitHub xem workflow
+**Deploy to VPS** chạy — kỳ vọng thấy dấu ✅ xanh sau khi `git pull`, build, và
+`pm2 restart` chạy xong trên VPS. Bấm vào lượt chạy để xem log chi tiết từng bước, giống hệt
+như đang xem trên terminal SSH.
+
+- **Nếu bước SSH báo lỗi kết nối** — kiểm tra lại `VPS_HOST`/`VPS_PORT` đúng chưa, và firewall
+  nhà cung cấp VPS (Security Group) có chặn IP của GitHub Actions runner không (thường không,
+  vì cổng 22 đã mở sẵn cho mọi IP từ [Phase 3](#3-ssh-vào-vps-lần-đầu--bảo-mật-cơ-bản)).
+- **Nếu báo `Permission denied (publickey)`** — private key dán vào `VPS_SSH_KEY` bị thiếu
+  dòng đầu/cuối, hoặc public key chưa được thêm đúng vào `~/.ssh/authorized_keys` trên VPS.
+- **Nếu build fail vì hết RAM** trên VPS cấu hình thấp — đây là rủi ro có sẵn của việc build
+  ngay trên VPS (giống hệt khi làm tay ở Phase 9), không phải lỗi riêng của workflow. Cân
+  nhắc thêm swap file nếu VPS dưới 2GB RAM hay gặp tình trạng này.
+- **Muốn deploy nhánh khác `main`** — sửa `branches: [main]` trong
+  `.github/workflows/deploy.yml`.
+
+Từ giờ, quy trình cập nhật code chỉ còn `git push` — không cần SSH tay theo
+[Phase 9](#9-deploy-các-lần-sau-cập-nhật-code) nữa (vẫn giữ nguyên Phase 9 để biết cách chạy
+tay khi cần debug, hoặc khi workflow gặp sự cố).
