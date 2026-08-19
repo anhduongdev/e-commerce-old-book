@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SeriesModule } from './series/series.module';
+import { ProductsModule } from './products/products.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { DatabaseModule } from './database/database.module';
 import configuration from './config/configuration';
@@ -19,6 +20,7 @@ import configuration from './config/configuration';
     AuthModule,
     CategoriesModule,
     SeriesModule,
+    ProductsModule,
     UploadsModule,
   ],
   controllers: [AppController],

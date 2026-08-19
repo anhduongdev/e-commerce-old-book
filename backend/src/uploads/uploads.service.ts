@@ -11,6 +11,7 @@ const ALLOWED_MIME_EXTENSIONS: Record<string, string> = {
 
 const CATEGORY_UPLOAD_DIR = join(process.cwd(), 'uploads', 'categories');
 const SERIES_UPLOAD_DIR = join(process.cwd(), 'uploads', 'series');
+const PRODUCT_UPLOAD_DIR = join(process.cwd(), 'uploads', 'products');
 
 @Injectable()
 export class UploadsService {
@@ -40,5 +41,18 @@ export class UploadsService {
     await writeFile(join(SERIES_UPLOAD_DIR, filename), file.buffer);
 
     return { url: `/uploads/series/${filename}` };
+  }
+
+  async saveProductImage(file: Express.Multer.File): Promise<{ url: string }> {
+    const extension = ALLOWED_MIME_EXTENSIONS[file.mimetype];
+    if (!extension) {
+      throw new BadRequestException('Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP');
+    }
+
+    await mkdir(PRODUCT_UPLOAD_DIR, { recursive: true });
+    const filename = `${randomBytes(16).toString('hex')}${extension}`;
+    await writeFile(join(PRODUCT_UPLOAD_DIR, filename), file.buffer);
+
+    return { url: `/uploads/products/${filename}` };
   }
 }
