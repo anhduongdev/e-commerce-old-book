@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { QueryCatalogProductsDto } from './dto/query-catalog-products.dto';
 
@@ -17,5 +17,10 @@ export class CatalogController {
   @Get('filters')
   filters() {
     return this.catalogService.getFilters();
+  }
+
+  @Get('products/:slug')
+  getBySlug(@Param('slug') slug: string) {
+    return this.catalogService.getBySlug(slug);
   }
 }

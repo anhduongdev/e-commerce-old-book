@@ -1,6 +1,7 @@
 import type { ApiErrorResponse } from "@/features/auth/types/login.types";
 import type {
   CatalogFilters,
+  CatalogProductDetail,
   CatalogProductListResponse,
   CatalogSort,
 } from "@/features/catalog/types/catalog.types";
@@ -58,4 +59,14 @@ export async function getCatalogFilters(): Promise<CatalogFilters> {
     cache: "no-store",
   });
   return handleResponse(res, "Không tải được bộ lọc");
+}
+
+export async function getCatalogProductBySlug(
+  slug: string,
+): Promise<CatalogProductDetail | null> {
+  const res = await fetch(`${API_URL}/catalog/products/${encodeURIComponent(slug)}`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  return handleResponse(res, "Không tải được sản phẩm");
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { QueryCatalogProductsDto } from './dto/query-catalog-products.dto';
@@ -13,6 +13,18 @@ type CatalogProductRow = Prisma.ProductGetPayload<{
 }>;
 type VariantRow = CatalogProductRow['variants'][number];
 type ImageRow = CatalogProductRow['images'][number];
+
+// Detail view always shows every active tập regardless of whatever filters
+// the customer arrived through — unlike list(), this include is static.
+const CATALOG_DETAIL_INCLUDE = {
+  series: { select: { id: true, name: true } },
+  productCategories: { include: { category: { select: { id: true, name: true } } } },
+  variants: {
+    where: { isActive: true, deletedAt: null },
+    orderBy: [{ sortOrder: 'asc' }, { volumeNumber: 'asc' }],
+  },
+  images: { orderBy: { sortOrder: 'asc' } },
+} satisfies Prisma.ProductInclude;
 
 @Injectable()
 export class CatalogService {
@@ -89,6 +101,23 @@ export class CatalogService {
       page,
       pageSize,
     };
+  }
+
+  async getBySlug(slug: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { slug, deletedAt: null, status: 'ACTIVE' },
+      include: CATALOG_DETAIL_INCLUDE,
+    });
+    if (!product) {
+      throw new NotFoundException('Không tìm thấy sản phẩm');
+    }
+
+    // Fire-and-forget — a view-counter failure must never break the page.
+    void this.prisma.product
+      .update({ where: { id: product.id }, data: { viewCount: { increment: 1 } } })
+      .catch(() => undefined);
+
+    return this.toDetailItem(product);
   }
 
   async getFilters() {
@@ -218,5 +247,76 @@ export class CatalogService {
       return { url: product.thumbnailUrl, isRealPhoto: false };
     }
     return { url: null, isRealPhoto: false };
+  }
+
+  private toDetailItem(product: CatalogProductRow) {
+    return {
+      id: product.id.toString(),
+      name: product.name,
+      slug: product.slug,
+      author: product.author,
+      publisher: product.publisher,
+      publishYear: product.publishYear,
+      isbn: product.isbn,
+      language: product.language,
+      shortDescription: product.shortDescription,
+      description: product.description,
+      seriesId: product.seriesId?.toString() ?? null,
+      seriesName: product.series?.name ?? null,
+      categories: product.productCategories.map((pc) => ({
+        id: pc.category.id.toString(),
+        name: pc.category.name,
+      })),
+      variants: product.variants.map((variant) =>
+        this.toVariantDetail(product, variant, product.images),
+      ),
+    };
+  }
+
+  private toVariantDetail(product: CatalogProductRow, variant: VariantRow, productImages: ImageRow[]) {
+    return {
+      id: variant.id.toString(),
+      volumeNumber: variant.volumeNumber,
+      name: variant.name,
+      price: variant.price.toString(),
+      compareAtPrice: variant.compareAtPrice !== null ? variant.compareAtPrice.toString() : null,
+      conditionGrade: variant.conditionGrade,
+      conditionNote: variant.conditionNote,
+      availableQuantity: Math.max(0, variant.stockQuantity - variant.reservedQuantity),
+      images: this.resolveVariantGallery(product, variant, productImages),
+    };
+  }
+
+  // Fuller than resolveVariantImage (list) — returns the whole gallery for
+  // this tập instead of picking just one, for the detail page's viewer:
+  // the tập's own photo first, then any images scoped to it, then the
+  // shared product-level gallery, falling back to the denormalized
+  // thumbnail only if nothing else exists. Deduped by URL.
+  private resolveVariantGallery(
+    product: CatalogProductRow,
+    variant: VariantRow,
+    productImages: ImageRow[],
+  ): { url: string; isRealPhoto: boolean }[] {
+    const gallery: { url: string; isRealPhoto: boolean }[] = [];
+    const seen = new Set<string>();
+    const push = (url: string | null, isRealPhoto: boolean) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      gallery.push({ url, isRealPhoto });
+    };
+
+    push(variant.imageUrl, true);
+    productImages
+      .filter((img) => img.variantId === variant.id)
+      .forEach((img) => push(img.url, img.isRealPhoto));
+    productImages
+      .filter((img) => img.variantId === null)
+      .forEach((img) => push(img.url, img.isRealPhoto));
+
+    if (gallery.length === 0 && product.thumbnailUrl) {
+      push(product.thumbnailUrl, false);
+    }
+
+    return gallery;
   }
 }

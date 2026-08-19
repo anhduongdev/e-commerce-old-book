@@ -51,3 +51,37 @@ export interface CatalogFilters {
   publishers: string[];
   priceBounds: { min: string; max: string } | null;
 }
+
+export interface CatalogVariantImage {
+  url: string;
+  isRealPhoto: boolean;
+}
+
+export interface CatalogVariantDetail {
+  id: string;
+  volumeNumber: number | null;
+  name: string | null;
+  price: string;
+  compareAtPrice: string | null;
+  conditionGrade: ConditionGrade;
+  conditionNote: string | null;
+  availableQuantity: number;
+  images: CatalogVariantImage[];
+}
+
+export interface CatalogProductDetail {
+  id: string;
+  name: string;
+  slug: string;
+  author: string | null;
+  publisher: string | null;
+  publishYear: number | null;
+  isbn: string | null;
+  language: string | null;
+  shortDescription: string | null;
+  description: string | null;
+  seriesId: string | null;
+  seriesName: string | null;
+  categories: { id: string; name: string }[];
+  variants: CatalogVariantDetail[];
+}

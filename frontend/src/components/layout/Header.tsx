@@ -14,6 +14,8 @@ import {
 import { Logo } from "@/components/common/Logo";
 import { AccountMenu } from "@/features/auth/components/AccountMenu";
 import { getCurrentUser } from "@/features/auth/services/session";
+import { getCartSummary } from "@/features/cart/services/cart-summary";
+import { formatPriceVnd } from "@/features/catalog/utils/format";
 
 const PROMO_ITEMS = [
   { icon: Truck, label: "Miễn phí vận chuyển cho đơn từ 200.000đ" },
@@ -40,7 +42,7 @@ const NAV_LINKS = [
 ];
 
 export async function Header() {
-  const user = await getCurrentUser();
+  const [user, cart] = await Promise.all([getCurrentUser(), getCartSummary()]);
 
   return (
     <header className="border-b border-brand-100">
@@ -117,12 +119,12 @@ export async function Header() {
               <span className="relative">
                 <ShoppingCart size={22} aria-hidden="true" />
                 <span className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-brand-700 text-[10px] font-semibold text-white">
-                  0
+                  {cart.itemCount}
                 </span>
               </span>
               <span className="flex flex-col leading-tight">
                 <span className="text-xs text-brand-600">Giỏ hàng</span>
-                <span className="font-medium">0đ</span>
+                <span className="font-medium">{formatPriceVnd(cart.subtotal)}</span>
               </span>
             </Link>
           </div>
