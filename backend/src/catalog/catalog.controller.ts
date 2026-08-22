@@ -23,4 +23,24 @@ export class CatalogController {
   getBySlug(@Param('slug') slug: string) {
     return this.catalogService.getBySlug(slug);
   }
+
+  @Get('banners')
+  banners(@Query('position') position?: string) {
+    return this.catalogService.getBanners(position);
+  }
+
+  @Get('categories')
+  categories(@Query('featured') featured?: string) {
+    return this.catalogService.getCategories(featured === 'true');
+  }
+
+  @Get('series')
+  seriesList(@Query('limit') limit?: string) {
+    return this.catalogService.getSeriesList(limit ? Number(limit) : undefined);
+  }
+
+  @Get('series/:slug')
+  seriesDetail(@Param('slug') slug: string) {
+    return this.catalogService.getSeriesBySlug(slug);
+  }
 }

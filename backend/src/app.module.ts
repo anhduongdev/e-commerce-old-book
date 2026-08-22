@@ -9,6 +9,9 @@ import { ProductsModule } from './products/products.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { CartModule } from './cart/cart.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { BannersModule } from './banners/banners.module';
+import { PostsModule } from './posts/posts.module';
+import { PagesModule } from './pages/pages.module';
 import { DatabaseModule } from './database/database.module';
 import configuration from './config/configuration';
 
@@ -26,6 +29,9 @@ import configuration from './config/configuration';
     CatalogModule,
     CartModule,
     UploadsModule,
+    BannersModule,
+    PostsModule,
+    PagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

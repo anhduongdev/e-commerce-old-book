@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BannerPosition, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { QueryCatalogProductsDto } from './dto/query-catalog-products.dto';
 
@@ -65,6 +65,7 @@ export class CatalogService {
       ...(query.categoryId
         ? { productCategories: { some: { categoryId: BigInt(query.categoryId) } } }
         : {}),
+      ...(query.seriesId ? { seriesId: BigInt(query.seriesId) } : {}),
       ...(query.author ? { author: query.author } : {}),
       ...(query.publisher ? { publisher: query.publisher } : {}),
       ...(Object.keys(minPriceFilter).length > 0 ? { minPrice: minPriceFilter } : {}),
@@ -161,6 +162,113 @@ export class CatalogService {
         priceAgg._min.minPrice !== null && priceAgg._max.minPrice !== null
           ? { min: priceAgg._min.minPrice.toString(), max: priceAgg._max.minPrice.toString() }
           : null,
+    };
+  }
+
+  async getBanners(position?: string) {
+    const now = new Date();
+    const banners = await this.prisma.banner.findMany({
+      where: {
+        isActive: true,
+        ...(position ? { position: position as BannerPosition } : {}),
+        AND: [
+          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+        ],
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    return banners.map((banner) => ({
+      id: banner.id.toString(),
+      title: banner.title,
+      imageUrl: banner.imageUrl,
+      linkUrl: banner.linkUrl,
+      position: banner.position,
+    }));
+  }
+
+  async getCategories(onlyFeatured: boolean) {
+    const categories = await this.prisma.category.findMany({
+      where: { isActive: true, ...(onlyFeatured ? { isFeatured: true } : {}) },
+      include: { _count: { select: { productCategories: true } } },
+      orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }],
+    });
+
+    const toNode = (category: (typeof categories)[number]) => ({
+      id: category.id.toString(),
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      imageUrl: category.imageUrl,
+      productCount: category._count.productCategories,
+    });
+
+    if (onlyFeatured) {
+      return categories.map(toNode);
+    }
+
+    const byParentId = new Map<string, typeof categories>();
+    for (const category of categories) {
+      const key = category.parentId?.toString() ?? '';
+      const bucket = byParentId.get(key);
+      if (bucket) bucket.push(category);
+      else byParentId.set(key, [category]);
+    }
+
+    const topLevel = byParentId.get('') ?? [];
+    return topLevel.map((category) => ({
+      ...toNode(category),
+      children: (byParentId.get(category.id.toString()) ?? []).map(toNode),
+    }));
+  }
+
+  async getSeriesList(limit = 24) {
+    const seriesRows = await this.prisma.series.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        products: { some: { status: 'ACTIVE', deletedAt: null } },
+      },
+      include: {
+        _count: { select: { products: { where: { status: 'ACTIVE', deletedAt: null } } } },
+      },
+      orderBy: [{ products: { _count: 'desc' } }, { name: 'asc' }],
+      take: limit,
+    });
+
+    return seriesRows.map((series) => ({
+      id: series.id.toString(),
+      name: series.name,
+      slug: series.slug,
+      author: series.author,
+      coverUrl: series.coverUrl,
+      totalVolumes: series.totalVolumes,
+      productCount: series._count.products,
+    }));
+  }
+
+  async getSeriesBySlug(slug: string) {
+    const series = await this.prisma.series.findFirst({
+      where: { slug, isActive: true, deletedAt: null },
+      include: {
+        _count: { select: { products: { where: { status: 'ACTIVE', deletedAt: null } } } },
+      },
+    });
+    if (!series) {
+      throw new NotFoundException('Không tìm thấy bộ truyện');
+    }
+
+    return {
+      id: series.id.toString(),
+      name: series.name,
+      slug: series.slug,
+      author: series.author,
+      publisher: series.publisher,
+      description: series.description,
+      coverUrl: series.coverUrl,
+      totalVolumes: series.totalVolumes,
+      productCount: series._count.products,
     };
   }
 

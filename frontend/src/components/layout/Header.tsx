@@ -15,6 +15,7 @@ import { Logo } from "@/components/common/Logo";
 import { AccountMenu } from "@/features/auth/components/AccountMenu";
 import { getCurrentUser } from "@/features/auth/services/session";
 import { getCartSummary } from "@/features/cart/services/cart-summary";
+import { getCatalogCategories } from "@/features/catalog/services/catalog";
 import { formatPriceVnd } from "@/features/catalog/utils/format";
 
 const PROMO_ITEMS = [
@@ -22,14 +23,6 @@ const PROMO_ITEMS = [
   { icon: BookOpen, label: "Sách cũ chất lượng – Giá tốt mỗi ngày" },
   { icon: Gift, label: "Tích điểm đổi quà cho thành viên" },
   { icon: Heart, label: "Ủng hộ sách cũ – Lan tỏa tri thức xanh" },
-];
-
-const BOOK_CATEGORIES = [
-  "Văn học",
-  "Kỹ năng sống",
-  "Kinh tế",
-  "Thiếu nhi",
-  "Lịch sử",
 ];
 
 const NAV_LINKS = [
@@ -42,7 +35,11 @@ const NAV_LINKS = [
 ];
 
 export async function Header() {
-  const [user, cart] = await Promise.all([getCurrentUser(), getCartSummary()]);
+  const [user, cart, categories] = await Promise.all([
+    getCurrentUser(),
+    getCartSummary(),
+    getCatalogCategories(false).catch(() => []),
+  ]);
 
   return (
     <header className="border-b border-border">
@@ -73,9 +70,9 @@ export async function Header() {
               defaultValue="all"
             >
               <option value="all">Tất cả</option>
-              {BOOK_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
@@ -152,14 +149,28 @@ export async function Header() {
 
               {hasDropdown ? (
                 <div className="invisible absolute left-0 top-full z-10 w-56 rounded-b-lg border border-border bg-white py-2 opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
-                  {BOOK_CATEGORIES.map((category) => (
-                    <Link
-                      key={category}
-                      href={`/danh-muc-sach/${category}`}
-                      className="block px-4 py-2 text-sm text-text hover:bg-primary-lightest hover:text-primary-dark"
-                    >
-                      {category}
-                    </Link>
+                  {categories.map((category) => (
+                    <div key={category.id}>
+                      <Link
+                        href={`/san-pham?categoryId=${category.id}`}
+                        className="block px-4 py-2 text-sm text-text hover:bg-primary-lightest hover:text-primary-dark"
+                      >
+                        {category.name}
+                      </Link>
+                      {category.children && category.children.length > 0 ? (
+                        <div className="pb-1">
+                          {category.children.map((child) => (
+                            <Link
+                              key={child.id}
+                              href={`/san-pham?categoryId=${child.id}`}
+                              className="block px-4 py-1.5 pl-8 text-xs text-text-secondary hover:bg-primary-lightest hover:text-primary-dark"
+                            >
+                              {child.name}
+                            </Link>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   ))}
                 </div>
               ) : null}

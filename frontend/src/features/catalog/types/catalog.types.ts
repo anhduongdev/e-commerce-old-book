@@ -85,3 +85,36 @@ export interface CatalogProductDetail {
   categories: { id: string; name: string }[];
   variants: CatalogVariantDetail[];
 }
+
+export interface CatalogBanner {
+  id: string;
+  title: string | null;
+  imageUrl: string;
+  linkUrl: string | null;
+  position: "HOME_HERO" | "HOME_SUB" | "SIDEBAR";
+}
+
+export interface CatalogCategoryNode {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  imageUrl: string | null;
+  productCount: number;
+  children?: CatalogCategoryNode[];
+}
+
+export interface CatalogSeries {
+  id: string;
+  name: string;
+  slug: string;
+  author: string | null;
+  coverUrl: string | null;
+  totalVolumes: number | null;
+  productCount: number;
+}
+
+export interface CatalogSeriesDetail extends CatalogSeries {
+  publisher: string | null;
+  description: string | null;
+}

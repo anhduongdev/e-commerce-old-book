@@ -3,19 +3,20 @@ import { Globe, Mail, MapPin, Phone, Send } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 
 const SUPPORT_LINKS = [
-  "Hướng dẫn mua hàng",
-  "Chính sách vận chuyển",
-  "Chính sách đổi trả",
-  "Câu hỏi thường gặp",
-  "Liên hệ hỗ trợ",
+  { label: "Hướng dẫn mua hàng", href: "#" },
+  { label: "Chính sách vận chuyển", href: "/giao-hang" },
+  { label: "Chính sách đổi trả", href: "/doi-tra" },
+  { label: "Chính sách thanh toán", href: "/thanh-toan" },
+  { label: "Câu hỏi thường gặp", href: "#" },
+  { label: "Liên hệ hỗ trợ", href: "/lien-he" },
 ];
 
 const ABOUT_LINKS = [
-  "Giới thiệu Tiệm Sách Xưa",
-  "Bán sách cho shop",
-  "Quy chế hoạt động",
-  "Điều khoản sử dụng",
-  "Chính sách bảo mật",
+  { label: "Giới thiệu Tiệm Sách Xưa", href: "/gioi-thieu" },
+  { label: "Bán sách cho shop", href: "#" },
+  { label: "Quy chế hoạt động", href: "#" },
+  { label: "Điều khoản sử dụng", href: "#" },
+  { label: "Chính sách bảo mật", href: "/bao-mat" },
 ];
 
 const SOCIAL_LINKS = [
@@ -56,9 +57,9 @@ export function Footer() {
             HỖ TRỢ KHÁCH HÀNG
           </h3>
           <ul className="mt-4 space-y-2 text-sm text-text-secondary">
-            {SUPPORT_LINKS.map((label) => (
+            {SUPPORT_LINKS.map(({ label, href }) => (
               <li key={label}>
-                <Link href="#" className="hover:text-primary-dark">
+                <Link href={href} className="hover:text-primary-dark">
                   {label}
                 </Link>
               </li>
@@ -71,9 +72,9 @@ export function Footer() {
             VỀ CHÚNG TÔI
           </h3>
           <ul className="mt-4 space-y-2 text-sm text-text-secondary">
-            {ABOUT_LINKS.map((label) => (
+            {ABOUT_LINKS.map(({ label, href }) => (
               <li key={label}>
-                <Link href="#" className="hover:text-primary-dark">
+                <Link href={href} className="hover:text-primary-dark">
                   {label}
                 </Link>
               </li>

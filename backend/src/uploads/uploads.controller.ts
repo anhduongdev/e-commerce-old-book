@@ -59,4 +59,32 @@ export class UploadsController {
     }
     return this.uploadsService.saveProductImage(file);
   }
+
+  @Post('banners/images')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+    }),
+  )
+  uploadBannerImage(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Thiếu file ảnh');
+    }
+    return this.uploadsService.saveBannerImage(file);
+  }
+
+  @Post('posts/images')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+    }),
+  )
+  uploadBlogImage(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Thiếu file ảnh');
+    }
+    return this.uploadsService.saveBlogImage(file);
+  }
 }

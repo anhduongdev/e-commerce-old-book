@@ -28,6 +28,10 @@ export class QueryCatalogProductsDto {
 
   @IsOptional()
   @IsString()
+  seriesId?: string;
+
+  @IsOptional()
+  @IsString()
   author?: string;
 
   @IsOptional()
