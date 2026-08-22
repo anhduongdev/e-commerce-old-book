@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export function AuthIllustration() {
   return (
-    <div className="relative hidden overflow-hidden rounded-2xl bg-cream lg:block">
+    <div className="relative hidden overflow-hidden rounded-2xl bg-bg lg:block">
       <Image
         src="/image-register-page.png"
         alt="Chào mừng bạn đến với Tiệm Sách Xưa"

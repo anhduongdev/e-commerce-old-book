@@ -4,7 +4,7 @@ import { ProductCard } from "@/features/catalog/components/ProductCard";
 export function ProductGrid({ products }: { products: CatalogProduct[] }) {
   if (products.length === 0) {
     return (
-      <div className="rounded-2xl bg-white p-16 text-center text-sm text-brand-600 shadow-sm">
+      <div className="rounded-2xl bg-white p-16 text-center text-sm text-text-secondary shadow-sm">
         Không tìm thấy sản phẩm phù hợp.
       </div>
     );

@@ -71,10 +71,10 @@ export function LoginForm() {
 
   return (
     <div className="rounded-2xl bg-white p-8 shadow-sm sm:p-10">
-      <h1 className="text-center font-serif text-3xl font-bold text-brand-900">
+      <h1 className="text-center font-serif text-3xl font-bold text-text">
         Đăng nhập
       </h1>
-      <p className="mt-2 text-center text-sm text-brand-600">
+      <p className="mt-2 text-center text-sm text-text-secondary">
         Đăng nhập để tiếp tục mua sắm và theo dõi đơn hàng của bạn.
       </p>
 
@@ -101,7 +101,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary"
               aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -110,13 +110,13 @@ export function LoginForm() {
         </Field>
 
         <div className="text-right text-sm">
-          <Link href="/forgot-password" className="text-brand-700 underline">
+          <Link href="/forgot-password" className="text-primary underline">
             Quên mật khẩu?
           </Link>
         </div>
 
         {formError ? (
-          <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+          <p className="rounded-lg bg-error/10 px-4 py-2 text-sm text-error">
             {formError}
           </p>
         ) : null}
@@ -124,7 +124,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-700 py-3 font-medium text-white transition-colors hover:bg-brand-900 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-medium text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
         >
           {status === "submitting" ? (
             <Loader2 size={18} className="animate-spin" aria-hidden="true" />
@@ -134,17 +134,17 @@ export function LoginForm() {
           Đăng nhập
         </button>
 
-        <div className="flex items-center gap-3 text-xs text-brand-600">
-          <span className="h-px flex-1 bg-brand-100" />
+        <div className="flex items-center gap-3 text-xs text-text-secondary">
+          <span className="h-px flex-1 bg-border" />
           HOẶC
-          <span className="h-px flex-1 bg-brand-100" />
+          <span className="h-px flex-1 bg-border" />
         </div>
 
-        <p className="text-center text-sm text-brand-600">
+        <p className="text-center text-sm text-text-secondary">
           Chưa có tài khoản?{" "}
           <Link
             href="/register"
-            className="font-medium text-brand-700 underline"
+            className="font-medium text-primary underline"
           >
             Đăng ký
           </Link>
@@ -155,8 +155,8 @@ export function LoginForm() {
 }
 
 function inputClassName(hasError: boolean) {
-  return `w-full rounded-lg border bg-cream-dark px-4 py-2.5 text-sm text-brand-900 outline-none placeholder:text-brand-600/60 focus:border-brand-700 ${
-    hasError ? "border-red-400" : "border-brand-100"
+  return `w-full rounded-lg border bg-bg-secondary px-4 py-2.5 text-sm text-text outline-none placeholder:text-text-muted focus:border-primary ${
+    hasError ? "border-error" : "border-border"
   }`;
 }
 
@@ -171,11 +171,11 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-brand-900">
+      <span className="mb-1.5 block text-sm font-medium text-text">
         {label}
       </span>
       {children}
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-error">{error}</p> : null}
     </label>
   );
 }

@@ -15,7 +15,7 @@ export function Pagination({
         type="button"
         disabled={page <= 1}
         onClick={() => onChange(page - 1)}
-        className="rounded-lg border border-brand-100 px-3 py-1.5 text-sm text-brand-900 disabled:opacity-40"
+        className="rounded-lg border border-border px-3 py-1.5 text-sm text-text disabled:opacity-40"
       >
         ‹
       </button>
@@ -26,8 +26,8 @@ export function Pagination({
           onClick={() => onChange(p)}
           className={`rounded-lg px-3 py-1.5 text-sm ${
             p === page
-              ? "bg-brand-700 text-white"
-              : "border border-brand-100 text-brand-900 hover:bg-brand-50"
+              ? "bg-primary text-white"
+              : "border border-border text-text hover:bg-primary-lightest"
           }`}
         >
           {p}
@@ -37,7 +37,7 @@ export function Pagination({
         type="button"
         disabled={page >= totalPages}
         onClick={() => onChange(page + 1)}
-        className="rounded-lg border border-brand-100 px-3 py-1.5 text-sm text-brand-900 disabled:opacity-40"
+        className="rounded-lg border border-border px-3 py-1.5 text-sm text-text disabled:opacity-40"
       >
         ›
       </button>

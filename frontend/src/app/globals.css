@@ -1,17 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand palette — "Tiệm Sách Xưa" (xanh lá đậm + kem) */
-  --color-brand-900: #1e3a24;
-  --color-brand-700: #2f5233;
-  --color-brand-600: #3f6b3f;
-  --color-brand-100: #e8f0e3;
-  --color-brand-50: #f4f8f1;
-  --color-cream: #fbf6ec;
-  --color-cream-dark: #f2e9d6;
+  /* Brand palette — "Tiệm Sách Xưa" (xanh lá tươi + vàng) */
+  --color-primary: #22c55e;
+  --color-primary-dark: #16a34a;
+  --color-primary-light: #dcfce7;
+  --color-primary-lightest: #f0fdf4;
+
+  --color-secondary: #fde68a;
+  --color-secondary-dark: #facc15;
+  --color-secondary-light: #fef9c3;
+
+  --color-bg: #fffef8;
+  --color-bg-secondary: #f7fbf7;
+  --color-border: #e5ede5;
+
+  --color-text: #263746;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  /* Legacy brand tokens kept as aliases so existing usages stay on-palette */
+  --color-brand-900: var(--color-primary-dark);
+  --color-brand-700: var(--color-primary);
+  --color-brand-600: var(--color-text-secondary);
+  --color-brand-100: var(--color-border);
+  --color-brand-50: var(--color-primary-lightest);
+  --color-cream: var(--color-bg);
+  --color-cream-dark: var(--color-bg-secondary);
 }
 
 @theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-lightest: var(--color-primary-lightest);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-dark: var(--color-secondary-dark);
+  --color-secondary-light: var(--color-secondary-light);
+  --color-bg: var(--color-bg);
+  --color-bg-secondary: var(--color-bg-secondary);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+
   --color-brand-900: var(--color-brand-900);
   --color-brand-700: var(--color-brand-700);
   --color-brand-600: var(--color-brand-600);
@@ -19,7 +58,13 @@
   --color-brand-50: var(--color-brand-50);
   --color-cream: var(--color-cream);
   --color-cream-dark: var(--color-cream-dark);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-playfair);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }

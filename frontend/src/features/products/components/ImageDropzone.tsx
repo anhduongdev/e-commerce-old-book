@@ -40,7 +40,7 @@ export function ImageDropzone({
 
   if (value) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-brand-100 bg-cream-dark p-3">
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-bg-secondary p-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`${BACKEND_ORIGIN}${value}`}
@@ -48,11 +48,11 @@ export function ImageDropzone({
           className="h-16 w-16 shrink-0 rounded-lg object-cover"
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-brand-900">{value.split("/").pop()}</p>
+          <p className="truncate text-sm font-medium text-text">{value.split("/").pop()}</p>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="mt-1 text-xs font-medium text-brand-700 underline"
+            className="mt-1 text-xs font-medium text-primary underline"
           >
             Thay đổi ảnh
           </button>
@@ -67,17 +67,17 @@ export function ImageDropzone({
         onDragOver={(event) => event.preventDefault()}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-brand-100 bg-cream-dark px-6 py-8 text-center hover:border-brand-600"
+        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-bg-secondary px-6 py-8 text-center hover:border-primary"
       >
         {uploading ? (
-          <Loader2 size={24} className="animate-spin text-brand-700" />
+          <Loader2 size={24} className="animate-spin text-primary" />
         ) : (
-          <Upload size={24} className="text-brand-600" aria-hidden="true" />
+          <Upload size={24} className="text-text-secondary" aria-hidden="true" />
         )}
-        <p className="text-sm text-brand-900">
+        <p className="text-sm text-text">
           {uploading ? "Đang tải lên..." : "Kéo thả ảnh vào đây hoặc nhấp để chọn"}
         </p>
-        <p className="text-xs text-brand-600">Định dạng: JPG, PNG, WEBP. Kích thước tối đa 2MB.</p>
+        <p className="text-xs text-text-secondary">Định dạng: JPG, PNG, WEBP. Kích thước tối đa 2MB.</p>
       </div>
       <input
         ref={inputRef}
@@ -90,7 +90,7 @@ export function ImageDropzone({
           event.target.value = "";
         }}
       />
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-error">{error}</p> : null}
     </div>
   );
 }

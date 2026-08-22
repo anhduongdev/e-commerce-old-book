@@ -28,7 +28,7 @@ export function SeriesTable({
 }) {
   if (series.length === 0) {
     return (
-      <div className="rounded-2xl bg-white p-10 text-center text-sm text-brand-600 shadow-sm">
+      <div className="rounded-2xl bg-white p-10 text-center text-sm text-text-secondary shadow-sm">
         Không tìm thấy bộ truyện nào.
       </div>
     );
@@ -38,7 +38,7 @@ export function SeriesTable({
     <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
       <table className="w-full min-w-[900px] text-left text-sm">
         <thead>
-          <tr className="border-b border-brand-100 text-xs font-semibold text-brand-600">
+          <tr className="border-b border-border text-xs font-semibold text-text-secondary">
             <th className="px-4 py-3">Tên series</th>
             <th className="px-4 py-3">Slug</th>
             <th className="px-4 py-3">Tác giả</th>
@@ -51,9 +51,9 @@ export function SeriesTable({
         </thead>
         <tbody>
           {series.map((item) => (
-            <tr key={item.id} className="border-b border-brand-100 last:border-0">
+            <tr key={item.id} className="border-b border-border last:border-0">
               <td className="px-4 py-3">
-                <span className="flex items-center gap-2 text-brand-900">
+                <span className="flex items-center gap-2 text-text">
                   {item.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -62,33 +62,33 @@ export function SeriesTable({
                       className="h-8 w-8 shrink-0 rounded object-cover"
                     />
                   ) : (
-                    <BookOpen size={16} className="text-brand-600" aria-hidden="true" />
+                    <BookOpen size={16} className="text-text-secondary" aria-hidden="true" />
                   )}
                   {item.name}
                 </span>
               </td>
-              <td className="px-4 py-3 text-brand-600">{item.slug}</td>
-              <td className="px-4 py-3 text-brand-600">{item.author ?? "—"}</td>
-              <td className="px-4 py-3 text-brand-600">{item.publisher ?? "—"}</td>
-              <td className="px-4 py-3 text-brand-600">{item.totalVolumes ?? "—"}</td>
+              <td className="px-4 py-3 text-text-secondary">{item.slug}</td>
+              <td className="px-4 py-3 text-text-secondary">{item.author ?? "—"}</td>
+              <td className="px-4 py-3 text-text-secondary">{item.publisher ?? "—"}</td>
+              <td className="px-4 py-3 text-text-secondary">{item.totalVolumes ?? "—"}</td>
               <td className="px-4 py-3">
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     item.isActive
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-orange-100 text-orange-700"
+                      ? "bg-success/10 text-success"
+                      : "bg-warning/10 text-warning"
                   }`}
                 >
                   {item.isActive ? "Hiển thị" : "Ẩn"}
                 </span>
               </td>
-              <td className="px-4 py-3 text-brand-600">{formatDate(item.updatedAt)}</td>
+              <td className="px-4 py-3 text-text-secondary">{formatDate(item.updatedAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1">
                   <Link
                     href={`/admin/series/${item.id}/edit`}
                     aria-label="Sửa"
-                    className="rounded-lg p-2 text-brand-700 hover:bg-brand-50"
+                    className="rounded-lg p-2 text-primary hover:bg-primary-lightest"
                   >
                     <Pencil size={16} aria-hidden="true" />
                   </Link>
@@ -96,7 +96,7 @@ export function SeriesTable({
                     type="button"
                     onClick={() => onToggleActive(item)}
                     aria-label={item.isActive ? "Ẩn bộ truyện" : "Hiện bộ truyện"}
-                    className="rounded-lg p-2 text-brand-700 hover:bg-brand-50"
+                    className="rounded-lg p-2 text-primary hover:bg-primary-lightest"
                   >
                     {item.isActive ? (
                       <Eye size={16} aria-hidden="true" />
@@ -108,7 +108,7 @@ export function SeriesTable({
                     type="button"
                     onClick={() => onDeleteRequest(item)}
                     aria-label="Xóa"
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                    className="rounded-lg p-2 text-error hover:bg-error/10"
                   >
                     <Trash2 size={16} aria-hidden="true" />
                   </button>

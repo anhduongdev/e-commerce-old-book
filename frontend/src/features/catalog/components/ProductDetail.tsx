@@ -20,7 +20,7 @@ export function ProductDetail({ product }: { product: CatalogProductDetail }) {
 
   if (!variant) {
     return (
-      <div className="rounded-2xl bg-white p-10 text-center text-sm text-brand-600 shadow-sm">
+      <div className="rounded-2xl bg-white p-10 text-center text-sm text-text-secondary shadow-sm">
         Sản phẩm hiện không còn phiên bản nào đang bán.
       </div>
     );
@@ -40,10 +40,10 @@ export function ProductDetail({ product }: { product: CatalogProductDetail }) {
 
       <div className="space-y-5">
         <div>
-          <h1 className="font-serif text-2xl font-bold text-brand-900">{product.name}</h1>
-          {meta ? <p className="mt-1 text-sm text-brand-600">{meta}</p> : null}
+          <h1 className="font-serif text-2xl font-bold text-text">{product.name}</h1>
+          {meta ? <p className="mt-1 text-sm text-text-secondary">{meta}</p> : null}
           {product.seriesName ? (
-            <p className="mt-1 text-sm text-brand-600">Thuộc bộ: {product.seriesName}</p>
+            <p className="mt-1 text-sm text-text-secondary">Thuộc bộ: {product.seriesName}</p>
           ) : null}
           {product.categories.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -51,7 +51,7 @@ export function ProductDetail({ product }: { product: CatalogProductDetail }) {
                 <Link
                   key={category.id}
                   href={`/san-pham?categoryId=${category.id}`}
-                  className="rounded-full bg-brand-50 px-2.5 py-1 text-xs text-brand-700 hover:bg-brand-100"
+                  className="rounded-full bg-primary-lightest px-2.5 py-1 text-xs text-primary hover:bg-primary-light"
                 >
                   {category.name}
                 </Link>
@@ -62,7 +62,7 @@ export function ProductDetail({ product }: { product: CatalogProductDetail }) {
 
         {product.variants.length > 1 ? (
           <div>
-            <p className="mb-1.5 text-sm font-medium text-brand-900">Chọn tập</p>
+            <p className="mb-1.5 text-sm font-medium text-text">Chọn tập</p>
             <div className="flex flex-wrap gap-2">
               {product.variants.map((v, index) => (
                 <button
@@ -71,8 +71,8 @@ export function ProductDetail({ product }: { product: CatalogProductDetail }) {
                   onClick={() => setSelectedVariantIndex(index)}
                   className={`rounded-full px-3 py-2 text-sm font-medium ${
                     index === selectedVariantIndex
-                      ? "bg-brand-700 text-white"
-                      : "border border-brand-100 text-brand-900 hover:bg-brand-50"
+                      ? "bg-primary text-white"
+                      : "border border-border text-text hover:bg-primary-lightest"
                   }`}
                 >
                   {v.volumeNumber ? `Tập ${v.volumeNumber}` : (v.name ?? "—")}
@@ -86,14 +86,14 @@ export function ProductDetail({ product }: { product: CatalogProductDetail }) {
         <VariantPurchasePanel key={variant.id} variant={variant} />
 
         {product.shortDescription ? (
-          <p className="text-sm text-brand-600">{product.shortDescription}</p>
+          <p className="text-sm text-text-secondary">{product.shortDescription}</p>
         ) : null}
       </div>
 
       {product.description ? (
         <div className="lg:col-span-2">
-          <h2 className="mb-2 font-serif text-lg font-bold text-brand-900">Mô tả chi tiết</h2>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-brand-600">
+          <h2 className="mb-2 font-serif text-lg font-bold text-text">Mô tả chi tiết</h2>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">
             {product.description}
           </p>
         </div>
@@ -130,9 +130,9 @@ function VariantPurchasePanel({ variant }: { variant: CatalogVariantDetail }) {
     <div className="space-y-4 rounded-2xl bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-2xl font-bold text-brand-900">{formatPriceVnd(variant.price)}</p>
+          <p className="text-2xl font-bold text-text">{formatPriceVnd(variant.price)}</p>
           {variant.compareAtPrice ? (
-            <p className="text-sm text-brand-600 line-through">
+            <p className="text-sm text-text-secondary line-through">
               {formatPriceVnd(variant.compareAtPrice)}
             </p>
           ) : null}
@@ -141,12 +141,12 @@ function VariantPurchasePanel({ variant }: { variant: CatalogVariantDetail }) {
       </div>
 
       {variant.conditionNote ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{variant.conditionNote}</p>
+        <p className="rounded-lg bg-secondary-light p-3 text-sm text-text">{variant.conditionNote}</p>
       ) : null}
 
-      <p className="text-sm text-brand-600">
+      <p className="text-sm text-text-secondary">
         {outOfStock ? (
-          <span className="font-medium text-red-600">Hết hàng</span>
+          <span className="font-medium text-error">Hết hàng</span>
         ) : (
           `Còn ${variant.availableQuantity} cuốn`
         )}
@@ -157,17 +157,17 @@ function VariantPurchasePanel({ variant }: { variant: CatalogVariantDetail }) {
       ) : null}
 
       {error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-lg bg-error/10 px-3 py-2 text-sm text-error">{error}</p>
       ) : null}
       {success ? (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p>
+        <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">{success}</p>
       ) : null}
 
       <button
         type="button"
         disabled={outOfStock || adding}
         onClick={() => void handleAddToCart()}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-700 py-3 font-medium text-white transition-colors hover:bg-brand-900 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-medium text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
       >
         {adding ? (
           <Loader2 size={18} className="animate-spin" aria-hidden="true" />

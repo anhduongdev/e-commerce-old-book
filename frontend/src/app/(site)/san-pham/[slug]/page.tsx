@@ -27,16 +27,16 @@ export default async function ProductDetailPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <nav className="mb-6 text-sm text-brand-600">
-        <Link href="/" className="hover:text-brand-900">
+      <nav className="mb-6 text-sm text-text-secondary">
+        <Link href="/" className="hover:text-text">
           Trang chủ
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/san-pham" className="hover:text-brand-900">
+        <Link href="/san-pham" className="hover:text-text">
           Sản phẩm
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-brand-900">{product.name}</span>
+        <span className="text-text">{product.name}</span>
       </nav>
 
       <ProductDetail product={product} />

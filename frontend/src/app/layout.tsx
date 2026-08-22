@@ -28,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="vi"
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-cream text-brand-900">
+      <body className="flex min-h-full flex-col bg-bg text-text">
         {children}
       </body>
     </html>

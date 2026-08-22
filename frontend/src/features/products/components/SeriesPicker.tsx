@@ -55,8 +55,8 @@ export function SeriesPicker({
           onClick={() => onChange(true, null)}
           className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium ${
             standalone
-              ? "border-brand-700 bg-brand-50 text-brand-900"
-              : "border-brand-100 text-brand-600 hover:bg-brand-50"
+              ? "border-primary bg-primary-lightest text-text"
+              : "border-border text-text-secondary hover:bg-primary-lightest"
           }`}
         >
           Sách lẻ
@@ -66,8 +66,8 @@ export function SeriesPicker({
           onClick={() => onChange(false, seriesId)}
           className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium ${
             !standalone
-              ? "border-brand-700 bg-brand-50 text-brand-900"
-              : "border-brand-100 text-brand-600 hover:bg-brand-50"
+              ? "border-primary bg-primary-lightest text-text"
+              : "border-border text-text-secondary hover:bg-primary-lightest"
           }`}
         >
           Thuộc bộ truyện
@@ -75,7 +75,7 @@ export function SeriesPicker({
       </div>
 
       {blockedReason ? (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{blockedReason}</p>
+        <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">{blockedReason}</p>
       ) : null}
 
       {!standalone ? (
@@ -85,18 +85,18 @@ export function SeriesPicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm bộ truyện..."
-            className="mb-2 w-full rounded-lg border border-brand-100 bg-cream-dark px-4 py-2.5 text-sm text-brand-900 outline-none placeholder:text-brand-600/60 focus:border-brand-700"
+            className="mb-2 w-full rounded-lg border border-border bg-bg-secondary px-4 py-2.5 text-sm text-text outline-none placeholder:text-text-muted focus:border-primary"
           />
           {loading ? (
-            <p className="text-sm text-brand-600">Đang tải...</p>
+            <p className="text-sm text-text-secondary">Đang tải...</p>
           ) : error ? (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-error">{error}</p>
           ) : (
             <select
               value={seriesId ?? ""}
               onChange={(e) => onChange(false, e.target.value || null)}
               size={Math.min(6, Math.max(3, filtered.length || 1))}
-              className="w-full rounded-lg border border-brand-100 bg-cream-dark px-3 py-2 text-sm text-brand-900 outline-none focus:border-brand-700"
+              className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-text outline-none focus:border-primary"
             >
               {filtered.length === 0 ? (
                 <option value="" disabled>

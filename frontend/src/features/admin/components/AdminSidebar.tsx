@@ -31,12 +31,12 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-brand-100 bg-white">
+    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-border bg-bg">
       <div className="flex items-center gap-2 px-5 py-5">
         <Image src="/logo-icon.png" alt="Tiệm Sách Xưa" width={32} height={32} className="rounded-full" />
         <div className="leading-tight">
-          <p className="font-serif text-lg font-bold text-brand-900">Tiệm Sách Xưa</p>
-          <p className="text-xs text-brand-600">Sách cũ – Truyện tranh – Giá trị mới</p>
+          <p className="font-serif text-lg font-bold text-text">Tiệm Sách Xưa</p>
+          <p className="text-xs text-text-secondary">Sách cũ – Truyện tranh – Giá trị mới</p>
         </div>
       </div>
 
@@ -50,8 +50,8 @@ export function AdminSidebar() {
               href={href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                 isActive
-                  ? "bg-brand-100 font-medium text-brand-900"
-                  : "text-brand-600 hover:bg-brand-50 hover:text-brand-900"
+                  ? "bg-primary-light font-medium text-text"
+                  : "text-text-secondary hover:bg-primary-lightest hover:text-text"
               }`}
             >
               <Icon size={18} aria-hidden="true" />
@@ -61,12 +61,12 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-brand-100 px-5 py-4">
+      <div className="border-t border-border px-5 py-4">
         <div className="flex items-center gap-2">
           <Image src="/logo-icon.png" alt="" width={28} height={28} className="rounded-full" aria-hidden="true" />
           <div className="leading-tight">
-            <p className="text-sm font-medium text-brand-900">Tiệm Sách Xưa</p>
-            <p className="text-xs text-brand-600">Lan tỏa tri thức xanh</p>
+            <p className="text-sm font-medium text-text">Tiệm Sách Xưa</p>
+            <p className="text-xs text-text-secondary">Lan tỏa tri thức xanh</p>
           </div>
         </div>
       </div>

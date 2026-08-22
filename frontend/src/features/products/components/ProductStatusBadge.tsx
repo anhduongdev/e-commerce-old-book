@@ -1,9 +1,9 @@
 import type { ProductStatus } from "@/features/products/types/product.types";
 
 export const PRODUCT_STATUS_LABELS: Record<ProductStatus, { label: string; className: string }> = {
-  ACTIVE: { label: "Đang bán", className: "bg-emerald-100 text-emerald-700" },
-  DRAFT: { label: "Bản nháp", className: "bg-slate-100 text-slate-700" },
-  HIDDEN: { label: "Đang ẩn", className: "bg-orange-100 text-orange-700" },
+  ACTIVE: { label: "Đang bán", className: "bg-success/10 text-success" },
+  DRAFT: { label: "Bản nháp", className: "bg-bg-secondary text-text-secondary" },
+  HIDDEN: { label: "Đang ẩn", className: "bg-warning/10 text-warning" },
 };
 
 export const PRODUCT_STATUS_OPTIONS: { value: ProductStatus; label: string }[] = (

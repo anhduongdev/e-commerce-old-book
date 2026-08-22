@@ -106,16 +106,16 @@ export function RegisterForm() {
   if (status === "success") {
     return (
       <div className="flex flex-col items-center rounded-2xl bg-white p-10 text-center shadow-sm">
-        <CircleCheck size={48} className="text-brand-700" aria-hidden="true" />
-        <h2 className="mt-4 font-serif text-2xl font-bold text-brand-900">
+        <CircleCheck size={48} className="text-primary" aria-hidden="true" />
+        <h2 className="mt-4 font-serif text-2xl font-bold text-text">
           Tạo tài khoản thành công
         </h2>
-        <p className="mt-2 text-brand-600">
+        <p className="mt-2 text-text-secondary">
           Bạn có thể đăng nhập ngay để bắt đầu mua sắm.
         </p>
         <Link
           href="/login"
-          className="mt-6 rounded-full bg-brand-700 px-6 py-2.5 font-medium text-white transition-colors hover:bg-brand-900"
+          className="mt-6 rounded-full bg-primary px-6 py-2.5 font-medium text-white transition-colors hover:bg-primary-dark"
         >
           Đăng nhập ngay
         </Link>
@@ -125,10 +125,10 @@ export function RegisterForm() {
 
   return (
     <div className="rounded-2xl bg-white p-8 shadow-sm sm:p-10">
-      <h1 className="text-center font-serif text-3xl font-bold text-brand-900">
+      <h1 className="text-center font-serif text-3xl font-bold text-text">
         Đăng ký tài khoản
       </h1>
-      <p className="mt-2 text-center text-sm text-brand-600">
+      <p className="mt-2 text-center text-sm text-text-secondary">
         Tạo tài khoản để mua sắm dễ dàng hơn và nhận nhiều ưu đãi dành riêng
         cho bạn.
       </p>
@@ -176,7 +176,7 @@ export function RegisterForm() {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary"
               aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -196,7 +196,7 @@ export function RegisterForm() {
             <button
               type="button"
               onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary"
               aria-label={
                 showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
               }
@@ -207,29 +207,29 @@ export function RegisterForm() {
         </Field>
 
         <div>
-          <label className="flex items-start gap-2 text-sm text-brand-600">
+          <label className="flex items-start gap-2 text-sm text-text-secondary">
             <input
               type="checkbox"
               checked={values.agreeTerms}
               onChange={(e) => updateField("agreeTerms", e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-brand-100"
+              className="mt-0.5 h-4 w-4 rounded border-border"
             />
             Tôi đã đọc và đồng ý với{" "}
-            <Link href="#" className="text-brand-700 underline">
+            <Link href="#" className="text-primary underline">
               Điều khoản sử dụng
             </Link>{" "}
             và{" "}
-            <Link href="#" className="text-brand-700 underline">
+            <Link href="#" className="text-primary underline">
               Chính sách bảo mật
             </Link>
           </label>
           {errors.agreeTerms ? (
-            <p className="mt-1 text-xs text-red-600">{errors.agreeTerms}</p>
+            <p className="mt-1 text-xs text-error">{errors.agreeTerms}</p>
           ) : null}
         </div>
 
         {formError ? (
-          <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+          <p className="rounded-lg bg-error/10 px-4 py-2 text-sm text-error">
             {formError}
           </p>
         ) : null}
@@ -237,7 +237,7 @@ export function RegisterForm() {
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-700 py-3 font-medium text-white transition-colors hover:bg-brand-900 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-medium text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
         >
           {status === "submitting" ? (
             <Loader2 size={18} className="animate-spin" aria-hidden="true" />
@@ -247,15 +247,15 @@ export function RegisterForm() {
           Tạo tài khoản
         </button>
 
-        <div className="flex items-center gap-3 text-xs text-brand-600">
-          <span className="h-px flex-1 bg-brand-100" />
+        <div className="flex items-center gap-3 text-xs text-text-secondary">
+          <span className="h-px flex-1 bg-border" />
           HOẶC
-          <span className="h-px flex-1 bg-brand-100" />
+          <span className="h-px flex-1 bg-border" />
         </div>
 
-        <p className="text-center text-sm text-brand-600">
+        <p className="text-center text-sm text-text-secondary">
           Đã có tài khoản?{" "}
-          <Link href="/login" className="font-medium text-brand-700 underline">
+          <Link href="/login" className="font-medium text-primary underline">
             Đăng nhập
           </Link>
         </p>
@@ -265,8 +265,8 @@ export function RegisterForm() {
 }
 
 function inputClassName(hasError: boolean) {
-  return `w-full rounded-lg border bg-cream-dark px-4 py-2.5 text-sm text-brand-900 outline-none placeholder:text-brand-600/60 focus:border-brand-700 ${
-    hasError ? "border-red-400" : "border-brand-100"
+  return `w-full rounded-lg border bg-bg-secondary px-4 py-2.5 text-sm text-text outline-none placeholder:text-text-muted focus:border-primary ${
+    hasError ? "border-error" : "border-border"
   }`;
 }
 
@@ -281,11 +281,11 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-brand-900">
+      <span className="mb-1.5 block text-sm font-medium text-text">
         {label}
       </span>
       {children}
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-error">{error}</p> : null}
     </label>
   );
 }

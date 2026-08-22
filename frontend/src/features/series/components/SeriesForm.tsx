@@ -110,7 +110,7 @@ export function SeriesForm({
   return (
     <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-4 rounded-2xl bg-white p-6 shadow-sm lg:col-span-2">
-        <h2 className="font-serif text-lg font-bold text-brand-900">
+        <h2 className="font-serif text-lg font-bold text-text">
           Thông tin bộ truyện
         </h2>
 
@@ -122,7 +122,7 @@ export function SeriesForm({
             placeholder="Nhập tên bộ truyện"
             className={inputClassName(Boolean(errors.name))}
           />
-          <p className="mt-1 text-xs text-brand-600">Tên hiển thị của bộ truyện.</p>
+          <p className="mt-1 text-xs text-text-secondary">Tên hiển thị của bộ truyện.</p>
         </Field>
 
         <Field label="Slug" required error={errors.slug}>
@@ -139,7 +139,7 @@ export function SeriesForm({
               mode === "edit" ? "cursor-not-allowed opacity-70" : ""
             }`}
           />
-          <p className="mt-1 text-xs text-brand-600">
+          <p className="mt-1 text-xs text-text-secondary">
             {mode === "edit"
               ? "Slug không thể thay đổi sau khi tạo."
               : "Đường dẫn thân thiện, viết thường, không dấu và không có khoảng trắng."}
@@ -179,7 +179,7 @@ export function SeriesForm({
             placeholder="Nhập mô tả về bộ truyện..."
             className={inputClassName(false)}
           />
-          <p className="mt-1 text-right text-xs text-brand-600">
+          <p className="mt-1 text-right text-xs text-text-secondary">
             {values.description.length}/{DESCRIPTION_SOFT_LIMIT}
           </p>
         </Field>
@@ -200,13 +200,13 @@ export function SeriesForm({
             placeholder="Nhập tổng số tập (nếu biết)"
             className={inputClassName(Boolean(errors.totalVolumes))}
           />
-          <p className="mt-1 text-xs text-brand-600">
+          <p className="mt-1 text-xs text-text-secondary">
             Tổng số tập của bộ truyện, có thể để trống nếu chưa rõ.
           </p>
         </Field>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-brand-900">Trạng thái hiển thị</span>
+          <span className="text-sm font-medium text-text">Trạng thái hiển thị</span>
           <ToggleSwitch
             checked={values.isActive}
             onChange={(checked) => updateField("isActive", checked)}
@@ -215,20 +215,20 @@ export function SeriesForm({
         </div>
 
         {formError ? (
-          <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{formError}</p>
+          <p className="rounded-lg bg-error/10 px-4 py-2 text-sm text-error">{formError}</p>
         ) : null}
 
         <div className="flex justify-end gap-3 pt-2">
           <Link
             href="/admin/series"
-            className="rounded-full border border-brand-100 px-5 py-2.5 text-sm font-medium text-brand-900 hover:bg-brand-50"
+            className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-text hover:bg-primary-lightest"
           >
             Hủy
           </Link>
           <button
             type="submit"
             disabled={status === "submitting"}
-            className="flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-900 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
           >
             {status === "submitting" ? (
               <Loader2 size={16} className="animate-spin" />
@@ -272,7 +272,7 @@ function ToggleSwitch({
     >
       <span
         className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors ${
-          checked ? "bg-brand-700" : "bg-brand-100"
+          checked ? "bg-primary" : "bg-border"
         }`}
       >
         <span
@@ -281,14 +281,14 @@ function ToggleSwitch({
           }`}
         />
       </span>
-      <span className="text-sm text-brand-900">{label}</span>
+      <span className="text-sm text-text">{label}</span>
     </button>
   );
 }
 
 function inputClassName(hasError: boolean) {
-  return `w-full rounded-lg border bg-cream-dark px-4 py-2.5 text-sm text-brand-900 outline-none placeholder:text-brand-600/60 focus:border-brand-700 ${
-    hasError ? "border-red-400" : "border-brand-100"
+  return `w-full rounded-lg border bg-bg-secondary px-4 py-2.5 text-sm text-text outline-none placeholder:text-text-muted focus:border-primary ${
+    hasError ? "border-error" : "border-border"
   }`;
 }
 
@@ -305,12 +305,12 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-brand-900">
+      <span className="mb-1.5 block text-sm font-medium text-text">
         {label}
-        {required ? <span className="text-red-600"> *</span> : null}
+        {required ? <span className="text-error"> *</span> : null}
       </span>
       {children}
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-error">{error}</p> : null}
     </label>
   );
 }

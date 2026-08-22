@@ -24,7 +24,7 @@ export function CategoryTable({
 }) {
   if (categories.length === 0) {
     return (
-      <div className="rounded-2xl bg-white p-10 text-center text-sm text-brand-600 shadow-sm">
+      <div className="rounded-2xl bg-white p-10 text-center text-sm text-text-secondary shadow-sm">
         Không tìm thấy danh mục nào.
       </div>
     );
@@ -34,7 +34,7 @@ export function CategoryTable({
     <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
       <table className="w-full min-w-[900px] text-left text-sm">
         <thead>
-          <tr className="border-b border-brand-100 text-xs font-semibold text-brand-600">
+          <tr className="border-b border-border text-xs font-semibold text-text-secondary">
             <th className="px-4 py-3">Tên danh mục</th>
             <th className="px-4 py-3">Slug</th>
             <th className="px-4 py-3">Cấp</th>
@@ -47,38 +47,38 @@ export function CategoryTable({
         </thead>
         <tbody>
           {categories.map((category) => (
-            <tr key={category.id} className="border-b border-brand-100 last:border-0">
+            <tr key={category.id} className="border-b border-border last:border-0">
               <td className="px-4 py-3">
-                <span className="flex items-center gap-2 text-brand-900">
-                  <Folder size={16} className="text-brand-600" aria-hidden="true" />
+                <span className="flex items-center gap-2 text-text">
+                  <Folder size={16} className="text-text-secondary" aria-hidden="true" />
                   {category.level === 2 ? (
-                    <span className="text-brand-600/60">— </span>
+                    <span className="text-text-secondary/60">— </span>
                   ) : null}
                   {category.name}
                 </span>
               </td>
-              <td className="px-4 py-3 text-brand-600">{category.slug}</td>
-              <td className="px-4 py-3 text-brand-600">{category.level}</td>
-              <td className="px-4 py-3 text-brand-600">{category.productCount}</td>
+              <td className="px-4 py-3 text-text-secondary">{category.slug}</td>
+              <td className="px-4 py-3 text-text-secondary">{category.level}</td>
+              <td className="px-4 py-3 text-text-secondary">{category.productCount}</td>
               <td className="px-4 py-3">
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     category.isActive
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-orange-100 text-orange-700"
+                      ? "bg-success/10 text-success"
+                      : "bg-warning/10 text-warning"
                   }`}
                 >
                   {category.isActive ? "Hiển thị" : "Ẩn"}
                 </span>
               </td>
-              <td className="px-4 py-3 text-brand-600">{category.sortOrder}</td>
-              <td className="px-4 py-3 text-brand-600">{formatDate(category.updatedAt)}</td>
+              <td className="px-4 py-3 text-text-secondary">{category.sortOrder}</td>
+              <td className="px-4 py-3 text-text-secondary">{formatDate(category.updatedAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1">
                   <Link
                     href={`/admin/categories/${category.id}/edit`}
                     aria-label="Sửa"
-                    className="rounded-lg p-2 text-brand-700 hover:bg-brand-50"
+                    className="rounded-lg p-2 text-primary hover:bg-primary-lightest"
                   >
                     <Pencil size={16} aria-hidden="true" />
                   </Link>
@@ -86,7 +86,7 @@ export function CategoryTable({
                     type="button"
                     onClick={() => onToggleActive(category)}
                     aria-label={category.isActive ? "Ẩn danh mục" : "Hiện danh mục"}
-                    className="rounded-lg p-2 text-brand-700 hover:bg-brand-50"
+                    className="rounded-lg p-2 text-primary hover:bg-primary-lightest"
                   >
                     {category.isActive ? (
                       <Eye size={16} aria-hidden="true" />
@@ -98,7 +98,7 @@ export function CategoryTable({
                     type="button"
                     onClick={() => onDeleteRequest(category)}
                     aria-label="Xóa"
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                    className="rounded-lg p-2 text-error hover:bg-error/10"
                   >
                     <Trash2 size={16} aria-hidden="true" />
                   </button>

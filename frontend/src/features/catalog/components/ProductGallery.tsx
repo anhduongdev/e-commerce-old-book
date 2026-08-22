@@ -16,7 +16,7 @@ export function ProductGallery({ images }: { images: CatalogVariantImage[] }) {
 
   return (
     <div>
-      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-brand-50">
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-primary-lightest">
         {current ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -25,10 +25,10 @@ export function ProductGallery({ images }: { images: CatalogVariantImage[] }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <Package size={64} className="text-brand-600" aria-hidden="true" />
+          <Package size={64} className="text-text-secondary" aria-hidden="true" />
         )}
         {current && !current.isRealPhoto ? (
-          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-brand-700">
+          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-primary">
             Ảnh minh họa
           </span>
         ) : null}
@@ -43,7 +43,7 @@ export function ProductGallery({ images }: { images: CatalogVariantImage[] }) {
               onClick={() => setSelectedIndex(index)}
               aria-label={`Xem ảnh ${index + 1}`}
               className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${
-                index === selectedIndex ? "border-brand-700" : "border-brand-100"
+                index === selectedIndex ? "border-primary" : "border-border"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -24,7 +24,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
 
   return (
     <div className="flex flex-col rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="relative mb-3 flex h-40 items-center justify-center overflow-hidden rounded-xl bg-brand-50">
+      <div className="relative mb-3 flex h-40 items-center justify-center overflow-hidden rounded-xl bg-primary-lightest">
         {variant.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -33,10 +33,10 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <Package size={32} className="text-brand-600" aria-hidden="true" />
+          <Package size={32} className="text-text-secondary" aria-hidden="true" />
         )}
         {variant.imageUrl && !variant.isRealPhoto ? (
-          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-brand-700">
+          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-primary">
             Ảnh minh họa
           </span>
         ) : null}
@@ -47,8 +47,8 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
         ) : null}
       </div>
 
-      <p className="line-clamp-2 font-serif text-sm font-bold text-brand-900">{product.name}</p>
-      <p className="mt-0.5 text-xs text-brand-600">{subtitle || " "}</p>
+      <p className="line-clamp-2 font-serif text-sm font-bold text-text">{product.name}</p>
+      <p className="mt-0.5 text-xs text-text-secondary">{subtitle || " "}</p>
 
       {hasMultipleVariants ? (
         <div className="mt-2">
@@ -56,7 +56,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
             <select
               value={selectedIndex}
               onChange={(e) => setSelectedIndex(Number(e.target.value))}
-              className="w-full rounded-lg border border-brand-100 bg-cream-dark px-2 py-1.5 text-xs text-brand-900 outline-none"
+              className="w-full rounded-lg border border-border bg-bg-secondary px-2 py-1.5 text-xs text-text outline-none"
             >
               {product.variants.map((v, index) => (
                 <option key={v.id} value={index}>
@@ -73,8 +73,8 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
                   onClick={() => setSelectedIndex(index)}
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     index === selectedIndex
-                      ? "bg-brand-700 text-white"
-                      : "border border-brand-100 text-brand-900 hover:bg-brand-50"
+                      ? "bg-primary text-white"
+                      : "border border-border text-text hover:bg-primary-lightest"
                   }`}
                 >
                   {v.volumeNumber ? `Tập ${v.volumeNumber}` : (v.name ?? "—")}
@@ -87,9 +87,9 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <div>
-          <p className="text-base font-bold text-brand-900">{formatPriceVnd(variant.price)}</p>
+          <p className="text-base font-bold text-text">{formatPriceVnd(variant.price)}</p>
           {variant.compareAtPrice ? (
-            <p className="text-xs text-brand-600 line-through">
+            <p className="text-xs text-text-secondary line-through">
               {formatPriceVnd(variant.compareAtPrice)}
             </p>
           ) : null}
@@ -98,11 +98,11 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       </div>
 
       {variant.conditionNote ? (
-        <p className="mt-1 line-clamp-2 text-xs text-brand-600">{variant.conditionNote}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-text-secondary">{variant.conditionNote}</p>
       ) : null}
 
       {!outOfStock ? (
-        <p className="mt-1 text-xs text-brand-600">Còn {variant.availableQuantity} cuốn</p>
+        <p className="mt-1 text-xs text-text-secondary">Còn {variant.availableQuantity} cuốn</p>
       ) : null}
     </div>
   );

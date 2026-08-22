@@ -138,15 +138,15 @@ export function CatalogPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <nav className="mb-6 text-sm text-brand-600">
-        <Link href="/" className="hover:text-brand-900">
+      <nav className="mb-6 text-sm text-text-secondary">
+        <Link href="/" className="hover:text-text">
           Trang chủ
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-brand-900">Sản phẩm</span>
+        <span className="text-text">Sản phẩm</span>
       </nav>
 
-      <h1 className="mb-6 font-serif text-2xl font-bold text-brand-900">Tất cả sản phẩm</h1>
+      <h1 className="mb-6 font-serif text-2xl font-bold text-text">Tất cả sản phẩm</h1>
 
       <div className="grid gap-8 lg:grid-cols-4">
         <div className="lg:col-span-1">
@@ -167,7 +167,7 @@ export function CatalogPage() {
               onSearch={(value) => updateQuery({ search: value })}
             />
             <div className="flex items-center gap-3">
-              <p className="whitespace-nowrap text-sm text-brand-600">
+              <p className="whitespace-nowrap text-sm text-text-secondary">
                 {loading ? "Đang tải..." : `Tìm thấy ${total} sản phẩm`}
               </p>
               <SortSelect value={current.sort} onChange={(sort) => updateQuery({ sort })} />
@@ -175,12 +175,12 @@ export function CatalogPage() {
           </div>
 
           {error ? (
-            <p className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
+            <p className="mb-4 rounded-lg bg-error/10 px-4 py-2 text-sm text-error">{error}</p>
           ) : null}
 
           {loading ? (
             <div className="flex items-center justify-center rounded-2xl bg-white p-16 shadow-sm">
-              <Loader2 size={28} className="animate-spin text-brand-700" />
+              <Loader2 size={28} className="animate-spin text-primary" />
             </div>
           ) : (
             <>

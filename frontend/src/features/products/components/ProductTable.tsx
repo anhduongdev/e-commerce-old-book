@@ -17,7 +17,7 @@ export function ProductTable({
 }) {
   if (products.length === 0) {
     return (
-      <div className="rounded-2xl bg-white p-10 text-center text-sm text-brand-600 shadow-sm">
+      <div className="rounded-2xl bg-white p-10 text-center text-sm text-text-secondary shadow-sm">
         Không tìm thấy sản phẩm nào.
       </div>
     );
@@ -27,7 +27,7 @@ export function ProductTable({
     <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
       <table className="w-full min-w-[1000px] text-left text-sm">
         <thead>
-          <tr className="border-b border-brand-100 text-xs font-semibold text-brand-600">
+          <tr className="border-b border-border text-xs font-semibold text-text-secondary">
             <th className="px-4 py-3">Sản phẩm</th>
             <th className="px-4 py-3">Bộ truyện</th>
             <th className="px-4 py-3">Giá</th>
@@ -40,9 +40,9 @@ export function ProductTable({
         </thead>
         <tbody>
           {products.map((item) => (
-            <tr key={item.id} className="border-b border-brand-100 last:border-0">
+            <tr key={item.id} className="border-b border-border last:border-0">
               <td className="px-4 py-3">
-                <span className="flex items-center gap-2 text-brand-900">
+                <span className="flex items-center gap-2 text-text">
                   {item.thumbnailUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -51,38 +51,38 @@ export function ProductTable({
                       className="h-9 w-9 shrink-0 rounded object-cover"
                     />
                   ) : (
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-brand-50">
-                      <Package size={16} className="text-brand-600" aria-hidden="true" />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary-lightest">
+                      <Package size={16} className="text-text-secondary" aria-hidden="true" />
                     </span>
                   )}
                   <span>
                     <span className="block font-medium">{item.name}</span>
-                    <span className="block text-xs text-brand-600">{item.slug}</span>
+                    <span className="block text-xs text-text-secondary">{item.slug}</span>
                   </span>
                 </span>
               </td>
-              <td className="px-4 py-3 text-brand-600">
+              <td className="px-4 py-3 text-text-secondary">
                 {item.seriesName ?? (
-                  <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs">Sách lẻ</span>
+                  <span className="rounded-full bg-primary-lightest px-2 py-0.5 text-xs">Sách lẻ</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-brand-600">
+              <td className="px-4 py-3 text-text-secondary">
                 {item.minPrice ? formatPriceVnd(item.minPrice) : "—"}
               </td>
-              <td className={`px-4 py-3 ${item.totalStock === 0 ? "text-red-600" : "text-brand-600"}`}>
+              <td className={`px-4 py-3 ${item.totalStock === 0 ? "text-error" : "text-text-secondary"}`}>
                 {item.totalStock}
               </td>
-              <td className="px-4 py-3 text-brand-600">{item.variantCount}</td>
+              <td className="px-4 py-3 text-text-secondary">{item.variantCount}</td>
               <td className="px-4 py-3">
                 <ProductStatusBadge status={item.status} />
               </td>
-              <td className="px-4 py-3 text-brand-600">{formatDate(item.updatedAt)}</td>
+              <td className="px-4 py-3 text-text-secondary">{formatDate(item.updatedAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1">
                   <Link
                     href={`/admin/products/${item.id}/edit`}
                     aria-label="Sửa"
-                    className="rounded-lg p-2 text-brand-700 hover:bg-brand-50"
+                    className="rounded-lg p-2 text-primary hover:bg-primary-lightest"
                   >
                     <Pencil size={16} aria-hidden="true" />
                   </Link>
@@ -90,7 +90,7 @@ export function ProductTable({
                     type="button"
                     onClick={() => onDeleteRequest(item)}
                     aria-label="Xóa"
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                    className="rounded-lg p-2 text-error hover:bg-error/10"
                   >
                     <Trash2 size={16} aria-hidden="true" />
                   </button>

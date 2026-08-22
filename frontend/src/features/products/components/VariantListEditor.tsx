@@ -110,7 +110,7 @@ export function VariantListEditor({
         <button
           type="button"
           onClick={addVariant}
-          className="flex items-center gap-2 rounded-lg border border-dashed border-brand-100 px-4 py-2.5 text-sm font-medium text-brand-700 hover:border-brand-600 hover:bg-brand-50"
+          className="flex items-center gap-2 rounded-lg border border-dashed border-border px-4 py-2.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary-lightest"
         >
           <Plus size={16} aria-hidden="true" />
           Thêm tập

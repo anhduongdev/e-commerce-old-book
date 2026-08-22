@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { getHealth } from "@/services/health";
 
 type Status = "loading" | "connected" | "error";
@@ -15,12 +16,22 @@ export function BackendStatus() {
   }, []);
 
   if (status === "loading") {
-    return <p className="text-zinc-500">Checking backend connection...</p>;
+    return <p className="text-text-muted">Checking backend connection...</p>;
   }
 
   if (status === "error") {
-    return <p className="text-red-600">Backend: connection failed</p>;
+    return (
+      <p className="flex items-center gap-2 text-error">
+        <XCircle size={18} aria-hidden="true" />
+        Backend: connection failed
+      </p>
+    );
   }
 
-  return <p className="text-green-600">Backend: connected</p>;
+  return (
+    <p className="flex items-center gap-2 text-success">
+      Backend: connected
+      <CheckCircle2 size={18} aria-hidden="true" />
+    </p>
+  );
 }

@@ -51,7 +51,7 @@ export function SeriesFormPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center rounded-2xl bg-white p-10 shadow-sm">
-        <Loader2 size={24} className="animate-spin text-brand-700" />
+        <Loader2 size={24} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -59,10 +59,10 @@ export function SeriesFormPage({
   if (error || (mode === "edit" && !series)) {
     return (
       <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-        <p className="text-sm text-red-700">{error ?? "Không tìm thấy bộ truyện"}</p>
+        <p className="text-sm text-error">{error ?? "Không tìm thấy bộ truyện"}</p>
         <Link
           href="/admin/series"
-          className="mt-4 inline-block text-sm font-medium text-brand-700 underline"
+          className="mt-4 inline-block text-sm font-medium text-primary underline"
         >
           Quay lại danh sách
         </Link>
@@ -72,31 +72,31 @@ export function SeriesFormPage({
 
   return (
     <div>
-      <nav className="mb-4 text-sm text-brand-600">
-        <Link href="/admin/series" className="hover:text-brand-900">
+      <nav className="mb-4 text-sm text-text-secondary">
+        <Link href="/admin/series" className="hover:text-text">
           Admin / Bộ truyện
         </Link>
         <span className="mx-1">/</span>
-        <span className="text-brand-900">
+        <span className="text-text">
           {mode === "create" ? "Tạo mới" : "Cập nhật series"}
         </span>
       </nav>
       <div className="mb-6 flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-light">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
             <path
               d="M4 6c3-1.5 8-1.5 10 1v11c-2-2.5-7-2.5-10-1V6Z"
-              stroke="var(--color-brand-700)"
+              stroke="var(--color-primary)"
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
           </svg>
         </span>
         <div>
-          <h1 className="font-serif text-2xl font-bold text-brand-900">
+          <h1 className="font-serif text-2xl font-bold text-text">
             {mode === "create" ? "Tạo bộ truyện mới" : "Cập nhật bộ truyện"}
           </h1>
-          <p className="text-sm text-brand-600">
+          <p className="text-sm text-text-secondary">
             {mode === "create"
               ? "Thêm series mới để quản lý trọn bộ sách, tập truyện và thông tin liên quan."
               : "Chỉnh sửa thông tin bộ truyện."}

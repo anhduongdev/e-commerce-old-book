@@ -15,7 +15,7 @@ export interface CurrentCatalogFilters {
 }
 
 const selectClassName =
-  "w-full rounded-lg border border-brand-100 bg-cream-dark px-3 py-2 text-sm text-brand-900 outline-none focus:border-brand-700";
+  "w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-text outline-none focus:border-primary";
 
 export function FilterSidebar({
   filters,
@@ -64,26 +64,26 @@ export function FilterSidebar({
   return (
     <div className="space-y-6 rounded-2xl bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-lg font-bold text-brand-900">Bộ lọc</h2>
+        <h2 className="font-serif text-lg font-bold text-text">Bộ lọc</h2>
         {hasActiveFilters ? (
           <button
             type="button"
             onClick={onClear}
-            className="text-xs font-medium text-brand-700 underline"
+            className="text-xs font-medium text-primary underline"
           >
             Xóa bộ lọc
           </button>
         ) : null}
       </div>
 
-      {filtersError ? <p className="text-sm text-red-600">{filtersError}</p> : null}
+      {filtersError ? <p className="text-sm text-error">{filtersError}</p> : null}
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-brand-900">Danh mục</h3>
+        <h3 className="text-sm font-semibold text-text">Danh mục</h3>
         {!filters ? (
-          <p className="text-sm text-brand-600">Đang tải...</p>
+          <p className="text-sm text-text-secondary">Đang tải...</p>
         ) : topLevelCategories.length === 0 ? (
-          <p className="text-sm text-brand-600">Chưa có danh mục.</p>
+          <p className="text-sm text-text-secondary">Chưa có danh mục.</p>
         ) : (
           <div className="space-y-1">
             {topLevelCategories.map((parent) => {
@@ -123,7 +123,7 @@ export function FilterSidebar({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-brand-900">Tác giả</h3>
+        <h3 className="text-sm font-semibold text-text">Tác giả</h3>
         <select
           value={current.author ?? ""}
           onChange={(e) => onChange({ author: e.target.value || undefined })}
@@ -139,7 +139,7 @@ export function FilterSidebar({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-brand-900">Nhà xuất bản</h3>
+        <h3 className="text-sm font-semibold text-text">Nhà xuất bản</h3>
         <select
           value={current.publisher ?? ""}
           onChange={(e) => onChange({ publisher: e.target.value || undefined })}
@@ -155,7 +155,7 @@ export function FilterSidebar({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-brand-900">Khoảng giá (₫)</h3>
+        <h3 className="text-sm font-semibold text-text">Khoảng giá (₫)</h3>
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -166,7 +166,7 @@ export function FilterSidebar({
             placeholder="Từ"
             className={selectClassName}
           />
-          <span className="text-brand-600">–</span>
+          <span className="text-text-secondary">–</span>
           <input
             type="number"
             min={0}
@@ -180,7 +180,7 @@ export function FilterSidebar({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-brand-900">Tình trạng</h3>
+        <h3 className="text-sm font-semibold text-text">Tình trạng</h3>
         <div className="flex flex-wrap gap-2">
           {CONDITION_OPTIONS.map((option) => {
             const active = current.conditionGrade === option.value;
@@ -191,8 +191,8 @@ export function FilterSidebar({
                 onClick={() => onChange({ conditionGrade: active ? undefined : option.value })}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                   active
-                    ? "bg-brand-700 text-white"
-                    : "border border-brand-100 text-brand-900 hover:bg-brand-50"
+                    ? "bg-primary text-white"
+                    : "border border-border text-text hover:bg-primary-lightest"
                 }`}
               >
                 {option.label}
@@ -219,7 +219,7 @@ function CategoryRadioRow({
       type="button"
       onClick={onSelect}
       className={`block w-full rounded-lg px-2 py-1.5 text-left text-sm ${
-        active ? "bg-brand-100 font-medium text-brand-900" : "text-brand-600 hover:bg-brand-50"
+        active ? "bg-primary-light font-medium text-text" : "text-text-secondary hover:bg-primary-lightest"
       }`}
     >
       {label}

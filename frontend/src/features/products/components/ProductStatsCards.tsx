@@ -14,11 +14,11 @@ export function ProductStatsCards({
   outOfStock: number;
 }) {
   const cards = [
-    { label: "Tổng sản phẩm", value: total, icon: Tag, tone: "bg-brand-100 text-brand-700" },
-    { label: "Đang bán", value: active, icon: Eye, tone: "bg-emerald-100 text-emerald-700" },
-    { label: "Bản nháp", value: draft, icon: Pencil, tone: "bg-slate-100 text-slate-700" },
-    { label: "Đang ẩn", value: hidden, icon: EyeOff, tone: "bg-orange-100 text-orange-700" },
-    { label: "Hết hàng", value: outOfStock, icon: PackageX, tone: "bg-red-100 text-red-700" },
+    { label: "Tổng sản phẩm", value: total, icon: Tag, tone: "bg-primary-light text-primary" },
+    { label: "Đang bán", value: active, icon: Eye, tone: "bg-success/10 text-success" },
+    { label: "Bản nháp", value: draft, icon: Pencil, tone: "bg-bg-secondary text-text-secondary" },
+    { label: "Đang ẩn", value: hidden, icon: EyeOff, tone: "bg-warning/10 text-warning" },
+    { label: "Hết hàng", value: outOfStock, icon: PackageX, tone: "bg-error/10 text-error" },
   ];
 
   return (
@@ -29,8 +29,8 @@ export function ProductStatsCards({
             <Icon size={20} aria-hidden="true" />
           </span>
           <div>
-            <p className="text-2xl font-bold text-brand-900">{value}</p>
-            <p className="text-sm text-brand-600">{label}</p>
+            <p className="text-2xl font-bold text-text">{value}</p>
+            <p className="text-sm text-text-secondary">{label}</p>
           </div>
         </div>
       ))}

@@ -57,7 +57,7 @@ export function FeaturedCategoriesPanel({
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <h3 className="font-serif text-lg font-bold text-brand-900">
+      <h3 className="font-serif text-lg font-bold text-text">
         Danh mục nổi bật
       </h3>
       <ul className="mt-4 space-y-1">
@@ -68,20 +68,20 @@ export function FeaturedCategoriesPanel({
             onDragStart={() => setDragId(item.id)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={() => void handleDrop(item.id)}
-            className="flex cursor-grab items-center gap-2 rounded-lg px-2 py-2 text-sm text-brand-900 hover:bg-brand-50 active:cursor-grabbing"
+            className="flex cursor-grab items-center gap-2 rounded-lg px-2 py-2 text-sm text-text hover:bg-primary-lightest active:cursor-grabbing"
           >
-            <GripVertical size={14} className="text-brand-600" aria-hidden="true" />
+            <GripVertical size={14} className="text-text-secondary" aria-hidden="true" />
             <span className="flex-1 truncate">{item.name}</span>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-xs font-medium text-brand-700">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-light text-xs font-medium text-primary">
               {index + 1}
             </span>
           </li>
         ))}
         {items.length === 0 ? (
-          <p className="text-sm text-brand-600">Chưa có danh mục nổi bật.</p>
+          <p className="text-sm text-text-secondary">Chưa có danh mục nổi bật.</p>
         ) : null}
       </ul>
-      <p className="mt-3 text-xs text-brand-600">
+      <p className="mt-3 text-xs text-text-secondary">
         {saving ? "Đang lưu thứ tự..." : "Kéo thả để sắp xếp thứ tự hiển thị."}
       </p>
     </div>

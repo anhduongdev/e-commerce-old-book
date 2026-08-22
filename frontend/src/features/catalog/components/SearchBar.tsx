@@ -36,19 +36,19 @@ export function SearchBar({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex min-w-[220px] flex-1 items-center overflow-hidden rounded-full border border-brand-100 bg-white"
+      className="flex min-w-[220px] flex-1 items-center overflow-hidden rounded-full border border-border bg-white"
     >
       <input
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Tìm theo tên sách, tác giả, NXB..."
-        className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-brand-600/60"
+        className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-text-muted"
       />
       <button
         type="submit"
         aria-label="Tìm kiếm"
-        className="flex h-full items-center bg-brand-700 px-4 py-2.5 text-white transition-colors hover:bg-brand-900"
+        className="flex h-full items-center bg-primary px-4 py-2.5 text-white transition-colors hover:bg-primary-dark"
       >
         <Search size={16} aria-hidden="true" />
       </button>

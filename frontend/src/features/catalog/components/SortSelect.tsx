@@ -17,7 +17,7 @@ export function SortSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as CatalogSort)}
-      className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm text-brand-900 outline-none"
+      className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text outline-none"
     >
       {SORT_OPTIONS.map((option) => (
         <option key={option.value} value={option.value}>

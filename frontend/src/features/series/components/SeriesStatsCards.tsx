@@ -12,10 +12,10 @@ export function SeriesStatsCards({
   totalVolumes: number;
 }) {
   const cards = [
-    { label: "Tổng series", value: total, icon: Library, tone: "bg-brand-100 text-brand-700" },
-    { label: "Đang hiển thị", value: visible, icon: Eye, tone: "bg-emerald-100 text-emerald-700" },
-    { label: "Đang ẩn", value: hidden, icon: EyeOff, tone: "bg-orange-100 text-orange-700" },
-    { label: "Tổng số tập", value: totalVolumes, icon: Layers, tone: "bg-brand-100 text-brand-700" },
+    { label: "Tổng series", value: total, icon: Library, tone: "bg-primary-light text-primary" },
+    { label: "Đang hiển thị", value: visible, icon: Eye, tone: "bg-success/10 text-success" },
+    { label: "Đang ẩn", value: hidden, icon: EyeOff, tone: "bg-warning/10 text-warning" },
+    { label: "Tổng số tập", value: totalVolumes, icon: Layers, tone: "bg-primary-light text-primary" },
   ];
 
   return (
@@ -29,8 +29,8 @@ export function SeriesStatsCards({
             <Icon size={20} aria-hidden="true" />
           </span>
           <div>
-            <p className="text-2xl font-bold text-brand-900">{value}</p>
-            <p className="text-sm text-brand-600">{label}</p>
+            <p className="text-2xl font-bold text-text">{value}</p>
+            <p className="text-sm text-text-secondary">{label}</p>
           </div>
         </div>
       ))}

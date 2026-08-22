@@ -93,8 +93,8 @@ function toGalleryImages(product?: ProductDetail): GalleryImage[] {
 type FieldErrors = Partial<Record<"name" | "slug", string>>;
 
 function inputClassName(hasError: boolean) {
-  return `w-full rounded-lg border bg-cream-dark px-4 py-2.5 text-sm text-brand-900 outline-none placeholder:text-brand-600/60 focus:border-brand-700 ${
-    hasError ? "border-red-400" : "border-brand-100"
+  return `w-full rounded-lg border bg-bg-secondary px-4 py-2.5 text-sm text-text outline-none placeholder:text-text-muted focus:border-primary ${
+    hasError ? "border-error" : "border-border"
   }`;
 }
 
@@ -235,7 +235,7 @@ export function ProductForm({
     <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
         <div className="space-y-4 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="font-serif text-lg font-bold text-brand-900">Thông tin cơ bản</h2>
+          <h2 className="font-serif text-lg font-bold text-text">Thông tin cơ bản</h2>
 
           <Field label="Tên sản phẩm" required error={errors.name}>
             <input
@@ -261,7 +261,7 @@ export function ProductForm({
                 mode === "edit" ? "cursor-not-allowed opacity-70" : ""
               }`}
             />
-            <p className="mt-1 text-xs text-brand-600">
+            <p className="mt-1 text-xs text-text-secondary">
               {mode === "edit"
                 ? "Slug không thể thay đổi sau khi tạo."
                 : "Đường dẫn thân thiện, viết thường, không dấu và không có khoảng trắng."}
@@ -332,7 +332,7 @@ export function ProductForm({
               rows={2}
               className={inputClassName(false)}
             />
-            <p className="mt-1 text-right text-xs text-brand-600">
+            <p className="mt-1 text-right text-xs text-text-secondary">
               {values.shortDescription.length}/500
             </p>
           </Field>
@@ -347,7 +347,7 @@ export function ProductForm({
           </Field>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-brand-900">Sản phẩm nổi bật</span>
+            <span className="text-sm font-medium text-text">Sản phẩm nổi bật</span>
             <ToggleSwitch
               checked={values.isFeatured}
               onChange={(checked) => updateField("isFeatured", checked)}
@@ -357,7 +357,7 @@ export function ProductForm({
         </div>
 
         <div className="space-y-3 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="font-serif text-lg font-bold text-brand-900">Bộ truyện</h2>
+          <h2 className="font-serif text-lg font-bold text-text">Bộ truyện</h2>
           <SeriesPicker
             standalone={values.standalone}
             seriesId={values.seriesId}
@@ -366,7 +366,7 @@ export function ProductForm({
         </div>
 
         <div className="space-y-3 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="font-serif text-lg font-bold text-brand-900">Danh mục</h2>
+          <h2 className="font-serif text-lg font-bold text-text">Danh mục</h2>
           <CategoryMultiSelect
             selectedIds={categoryIds}
             primaryId={primaryCategoryId}
@@ -378,15 +378,15 @@ export function ProductForm({
         </div>
 
         <div className="space-y-3 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="font-serif text-lg font-bold text-brand-900">Ảnh sản phẩm</h2>
-          <p className="text-xs text-brand-600">
+          <h2 className="font-serif text-lg font-bold text-text">Ảnh sản phẩm</h2>
+          <p className="text-xs text-text-secondary">
             Ảnh dùng chung cho sản phẩm. Ưu tiên ảnh chụp thật hơn ảnh bìa nhà xuất bản.
           </p>
           <ImageGallery images={galleryImages} onChange={setGalleryImages} />
         </div>
 
         <div className="space-y-3 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="font-serif text-lg font-bold text-brand-900">Các tập / phiên bản</h2>
+          <h2 className="font-serif text-lg font-bold text-text">Các tập / phiên bản</h2>
           <VariantListEditor
             variants={variants}
             onChange={setVariants}
@@ -396,20 +396,20 @@ export function ProductForm({
         </div>
 
         {formError ? (
-          <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{formError}</p>
+          <p className="rounded-lg bg-error/10 px-4 py-2 text-sm text-error">{formError}</p>
         ) : null}
 
         <div className="flex justify-end gap-3 pb-6">
           <Link
             href="/admin/products"
-            className="rounded-full border border-brand-100 px-5 py-2.5 text-sm font-medium text-brand-900 hover:bg-brand-50"
+            className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-text hover:bg-primary-lightest"
           >
             Hủy
           </Link>
           <button
             type="submit"
             disabled={status === "submitting"}
-            className="flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-900 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
           >
             {status === "submitting" ? (
               <Loader2 size={16} className="animate-spin" />
@@ -453,7 +453,7 @@ function ToggleSwitch({
     >
       <span
         className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors ${
-          checked ? "bg-brand-700" : "bg-brand-100"
+          checked ? "bg-primary" : "bg-border"
         }`}
       >
         <span
@@ -462,7 +462,7 @@ function ToggleSwitch({
           }`}
         />
       </span>
-      <span className="text-sm text-brand-900">{label}</span>
+      <span className="text-sm text-text">{label}</span>
     </button>
   );
 }
@@ -480,12 +480,12 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-brand-900">
+      <span className="mb-1.5 block text-sm font-medium text-text">
         {label}
-        {required ? <span className="text-red-600"> *</span> : null}
+        {required ? <span className="text-error"> *</span> : null}
       </span>
       {children}
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-error">{error}</p> : null}
     </label>
   );
 }

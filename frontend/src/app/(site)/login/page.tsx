@@ -18,12 +18,12 @@ export default async function LoginPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <nav className="mb-6 text-sm text-brand-600">
-        <Link href="/" className="hover:text-brand-900">
+      <nav className="mb-6 text-sm text-text-secondary">
+        <Link href="/" className="hover:text-text">
           Trang chủ
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-brand-900">Đăng nhập</span>
+        <span className="text-text">Đăng nhập</span>
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">

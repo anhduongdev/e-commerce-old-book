@@ -7,8 +7,8 @@ import { CONDITION_OPTIONS } from "@/features/products/components/ConditionGrade
 import { ImageDropzone } from "@/features/products/components/ImageDropzone";
 
 function inputClassName(hasError?: boolean) {
-  return `w-full rounded-lg border bg-white px-3 py-2 text-sm text-brand-900 outline-none placeholder:text-brand-600/60 focus:border-brand-700 ${
-    hasError ? "border-red-400" : "border-brand-100"
+  return `w-full rounded-lg border bg-white px-3 py-2 text-sm text-text outline-none placeholder:text-text-muted focus:border-primary ${
+    hasError ? "border-error" : "border-border"
   }`;
 }
 
@@ -34,10 +34,10 @@ export function VariantRow({
   }
 
   return (
-    <div className="rounded-xl border border-brand-100 p-4">
+    <div className="rounded-xl border border-border p-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-brand-900">SKU *</span>
+          <span className="mb-1 block text-xs font-medium text-text">SKU *</span>
           <input
             type="text"
             value={variant.sku}
@@ -49,7 +49,7 @@ export function VariantRow({
 
         {allowMultiple ? (
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-brand-900">Tập số</span>
+            <span className="mb-1 block text-xs font-medium text-text">Tập số</span>
             <input
               type="number"
               min={1}
@@ -62,7 +62,7 @@ export function VariantRow({
         ) : null}
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-brand-900">Tên hiển thị</span>
+          <span className="mb-1 block text-xs font-medium text-text">Tên hiển thị</span>
           <input
             type="text"
             value={variant.name}
@@ -73,7 +73,7 @@ export function VariantRow({
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-brand-900">Giá bán (₫) *</span>
+          <span className="mb-1 block text-xs font-medium text-text">Giá bán (₫) *</span>
           <input
             type="number"
             min={0}
@@ -86,7 +86,7 @@ export function VariantRow({
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-brand-900">Giá gốc (₫)</span>
+          <span className="mb-1 block text-xs font-medium text-text">Giá gốc (₫)</span>
           <input
             type="number"
             min={0}
@@ -99,7 +99,7 @@ export function VariantRow({
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-brand-900">Số lượng tồn *</span>
+          <span className="mb-1 block text-xs font-medium text-text">Số lượng tồn *</span>
           <input
             type="number"
             min={0}
@@ -111,7 +111,7 @@ export function VariantRow({
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-brand-900">Tình trạng *</span>
+          <span className="mb-1 block text-xs font-medium text-text">Tình trạng *</span>
           <select
             value={variant.conditionGrade}
             onChange={(e) => onUpdate({ conditionGrade: e.target.value as VariantRowState["conditionGrade"] })}
@@ -126,7 +126,7 @@ export function VariantRow({
         </label>
 
         <label className="block sm:col-span-2 lg:col-span-3">
-          <span className="mb-1 block text-xs font-medium text-brand-900">Ghi chú tình trạng</span>
+          <span className="mb-1 block text-xs font-medium text-text">Ghi chú tình trạng</span>
           <textarea
             value={variant.conditionNote}
             onChange={(e) => onUpdate({ conditionNote: e.target.value.slice(0, 500) })}
@@ -137,7 +137,7 @@ export function VariantRow({
         </label>
 
         <div className="sm:col-span-2 lg:col-span-3">
-          <span className="mb-1 block text-xs font-medium text-brand-900">Ảnh riêng của tập</span>
+          <span className="mb-1 block text-xs font-medium text-text">Ảnh riêng của tập</span>
           <ImageDropzone
             value={variant.imageUrl}
             onChange={(url) => onUpdate({ imageUrl: url })}
@@ -146,30 +146,30 @@ export function VariantRow({
       </div>
 
       <div className="mt-3 flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm text-brand-900">
+        <label className="flex items-center gap-2 text-sm text-text">
           <input
             type="checkbox"
             checked={variant.isActive}
             onChange={(e) => onUpdate({ isActive: e.target.checked })}
-            className="h-4 w-4 rounded border-brand-100"
+            className="h-4 w-4 rounded border-border"
           />
           Đang bán tập này
         </label>
 
         {confirmingRemove ? (
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-amber-700">Xóa tập này khỏi sản phẩm?</span>
+            <span className="text-warning">Xóa tập này khỏi sản phẩm?</span>
             <button
               type="button"
               onClick={() => setConfirmingRemove(false)}
-              className="rounded-full border border-brand-100 px-3 py-1 text-brand-900 hover:bg-brand-50"
+              className="rounded-full border border-border px-3 py-1 text-text hover:bg-primary-lightest"
             >
               Hủy
             </button>
             <button
               type="button"
               onClick={onRemove}
-              className="rounded-full bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+              className="rounded-full bg-error px-3 py-1 text-white hover:bg-error/90"
             >
               Xác nhận xóa
             </button>
@@ -178,7 +178,7 @@ export function VariantRow({
           <button
             type="button"
             onClick={handleRemoveClick}
-            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-error hover:bg-error/10"
           >
             <Trash2 size={14} aria-hidden="true" />
             Xóa tập

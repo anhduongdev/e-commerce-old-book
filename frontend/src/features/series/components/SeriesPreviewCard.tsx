@@ -25,11 +25,11 @@ export function SeriesPreviewCard({
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <h3 className="font-serif text-lg font-bold text-brand-900">
+      <h3 className="font-serif text-lg font-bold text-text">
         Xem trước bộ truyện
       </h3>
-      <div className="mt-4 overflow-hidden rounded-xl border border-brand-100">
-        <div className="flex h-32 items-center justify-center bg-brand-50">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        <div className="flex h-32 items-center justify-center bg-primary-lightest">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -38,18 +38,18 @@ export function SeriesPreviewCard({
               className="h-full w-full object-cover"
             />
           ) : (
-            <BookOpen size={32} className="text-brand-600" aria-hidden="true" />
+            <BookOpen size={32} className="text-text-secondary" aria-hidden="true" />
           )}
         </div>
         <div className="p-4">
-          <p className="font-serif text-base font-bold text-brand-900">
+          <p className="font-serif text-base font-bold text-text">
             {name || "Tên bộ truyện"}
           </p>
-          <p className="text-xs text-brand-600">{slug || "ten-bo-truyen"}</p>
+          <p className="text-xs text-text-secondary">{slug || "ten-bo-truyen"}</p>
           {subtitle ? (
-            <p className="mt-1 text-xs text-brand-600">{subtitle}</p>
+            <p className="mt-1 text-xs text-text-secondary">{subtitle}</p>
           ) : null}
-          <p className="mt-2 text-sm text-brand-600">
+          <p className="mt-2 text-sm text-text-secondary">
             {description || "Mô tả ngắn về bộ truyện sẽ hiển thị ở đây..."}
           </p>
         </div>

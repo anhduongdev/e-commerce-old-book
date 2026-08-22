@@ -43,27 +43,27 @@ export function AccountMenu({ user }: { user: LoginResponse }) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 text-sm text-brand-900"
+        className="flex items-center gap-2 text-sm text-text"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-100 bg-cream-dark">
-          <User size={18} className="text-brand-700" aria-hidden="true" />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-secondary-light">
+          <User size={18} className="text-primary-dark" aria-hidden="true" />
         </span>
         <span className="flex flex-col items-start leading-tight">
-          <span className="text-xs text-brand-600">Tài khoản</span>
+          <span className="text-xs text-text-secondary">Tài khoản</span>
           <span className="font-medium">{user.fullName}</span>
         </span>
         <ChevronDown size={14} aria-hidden="true" />
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-lg bg-white py-2 shadow-lg">
-          <p className="truncate px-4 py-1.5 text-sm font-medium text-brand-900">
+        <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-lg border border-border bg-white py-2 shadow-lg">
+          <p className="truncate px-4 py-1.5 text-sm font-medium text-text">
             {user.fullName}
           </p>
           {user.role === "ADMIN" ? (
             <Link
               href="/admin"
-              className="flex items-center gap-2 px-4 py-2 text-sm text-brand-900 hover:bg-brand-50"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-text hover:bg-primary-lightest hover:text-primary-dark"
               onClick={() => setOpen(false)}
             >
               <LayoutDashboard size={16} aria-hidden="true" />
@@ -74,7 +74,7 @@ export function AccountMenu({ user }: { user: LoginResponse }) {
             type="button"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-brand-900 hover:bg-brand-50 disabled:opacity-60"
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-text hover:bg-primary-lightest hover:text-primary-dark disabled:opacity-60"
           >
             <LogOut size={16} aria-hidden="true" />
             {loggingOut ? "Đang đăng xuất..." : "Đăng xuất"}

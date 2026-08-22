@@ -51,7 +51,7 @@ export function ProductFormPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center rounded-2xl bg-white p-10 shadow-sm">
-        <Loader2 size={24} className="animate-spin text-brand-700" />
+        <Loader2 size={24} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -59,10 +59,10 @@ export function ProductFormPage({
   if (error || (mode === "edit" && !product)) {
     return (
       <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-        <p className="text-sm text-red-700">{error ?? "Không tìm thấy sản phẩm"}</p>
+        <p className="text-sm text-error">{error ?? "Không tìm thấy sản phẩm"}</p>
         <Link
           href="/admin/products"
-          className="mt-4 inline-block text-sm font-medium text-brand-700 underline"
+          className="mt-4 inline-block text-sm font-medium text-primary underline"
         >
           Quay lại danh sách
         </Link>
@@ -72,24 +72,24 @@ export function ProductFormPage({
 
   return (
     <div>
-      <nav className="mb-4 text-sm text-brand-600">
-        <Link href="/admin/products" className="hover:text-brand-900">
+      <nav className="mb-4 text-sm text-text-secondary">
+        <Link href="/admin/products" className="hover:text-text">
           Admin / Sản phẩm
         </Link>
         <span className="mx-1">/</span>
-        <span className="text-brand-900">
+        <span className="text-text">
           {mode === "create" ? "Tạo mới" : "Cập nhật sản phẩm"}
         </span>
       </nav>
       <div className="mb-6 flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
-          <Package size={22} className="text-brand-700" aria-hidden="true" />
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-light">
+          <Package size={22} className="text-primary" aria-hidden="true" />
         </span>
         <div>
-          <h1 className="font-serif text-2xl font-bold text-brand-900">
+          <h1 className="font-serif text-2xl font-bold text-text">
             {mode === "create" ? "Tạo sản phẩm mới" : "Cập nhật sản phẩm"}
           </h1>
-          <p className="text-sm text-brand-600">
+          <p className="text-sm text-text-secondary">
             {mode === "create"
               ? "Thêm sản phẩm mới, có thể là sách lẻ hoặc thuộc một bộ truyện."
               : "Chỉnh sửa thông tin sản phẩm, các tập và ảnh liên quan."}

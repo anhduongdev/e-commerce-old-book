@@ -64,14 +64,14 @@ export function CategoryMultiSelect({
   }
 
   if (loading) {
-    return <p className="text-sm text-brand-600">Đang tải danh mục...</p>;
+    return <p className="text-sm text-text-secondary">Đang tải danh mục...</p>;
   }
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return <p className="text-sm text-error">{error}</p>;
   }
   if (categories.length === 0) {
     return (
-      <p className="text-sm text-brand-600">
+      <p className="text-sm text-text-secondary">
         Chưa có danh mục nào. Hãy tạo danh mục trước ở trang Danh mục.
       </p>
     );
@@ -93,7 +93,7 @@ export function CategoryMultiSelect({
               onSetPrimary={() => setPrimary(parent.id)}
             />
             {children.length > 0 ? (
-              <div className="ml-6 space-y-1.5 border-l border-brand-100 pl-4">
+              <div className="ml-6 space-y-1.5 border-l border-border pl-4">
                 {children.map((child) => (
                   <CategoryCheckboxRow
                     key={child.id}
@@ -127,12 +127,12 @@ function CategoryCheckboxRow({
   onSetPrimary: () => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-brand-900">
+    <label className="flex items-center gap-2 text-sm text-text">
       <input
         type="checkbox"
         checked={checked}
         onChange={onToggle}
-        className="h-4 w-4 rounded border-brand-100"
+        className="h-4 w-4 rounded border-border"
       />
       <span className="flex-1">{category.name}</span>
       {checked ? (
@@ -141,8 +141,8 @@ function CategoryCheckboxRow({
           onClick={onSetPrimary}
           className={`rounded-full px-2 py-0.5 text-xs ${
             isPrimary
-              ? "bg-brand-700 text-white"
-              : "border border-brand-100 text-brand-600 hover:bg-brand-50"
+              ? "bg-primary text-white"
+              : "border border-border text-text-secondary hover:bg-primary-lightest"
           }`}
         >
           Danh mục chính
